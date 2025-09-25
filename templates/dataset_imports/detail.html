@@ -1,0 +1,638 @@
+{% extends "theme.html" %}
+
+{% block app_data %}
+<div class="row" data-status-url="{% url 'dataset_imports:status' dataset.id %}" data-stream-url="{{ status_stream_url }}">
+    <div class="col-lg-8">
+        <h1 class="mb-3">{{ dataset.name }}</h1>
+        <p class="lead">{{ dataset.description }}</p>
+        {% if dataset.notes %}
+        <p class="text-muted small">{{ dataset.notes }}</p>
+        {% endif %}
+        <dl class="row">
+            <dt class="col-sm-3">Artifacts</dt>
+            <dd class="col-sm-9">{{ dataset.artifacts|length }}</dd>
+            {% if dataset.source_url %}
+            <dt class="col-sm-3">Source</dt>
+            <dd class="col-sm-9"><a href="{{ dataset.source_url }}" target="_blank" rel="noopener">{{ dataset.source_url }}</a></dd>
+            {% endif %}
+            {% if dataset.license %}
+            <dt class="col-sm-3">License</dt>
+            <dd class="col-sm-9">{{ dataset.license }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Import Status</h5>
+                <p class="card-text">
+                    <span class="badge {{ status_badge_class|default:'bg-secondary' }}" id="status-label">
+                        <span aria-hidden="true" class="status-check me-1{% if not status_show_check %} d-none{% endif %}">&#10003;</span>
+                        <span id="status-label-text">{{ status_label }}</span>
+                    </span>
+                </p>
+                {% if latest_import %}
+                    <dl class="row">
+                        <dt class="col-sm-5">Started</dt>
+                        <dd class="col-sm-7">{{ latest_import.started_at|default:"—" }}</dd>
+                        <dt class="col-sm-5">Updated</dt>
+                        <dd class="col-sm-7">{{ latest_import.updated_at }}</dd>
+                        <dt class="col-sm-5">Artifacts</dt>
+                        <dd class="col-sm-7"><span id="artifact-count-text">{{ downloaded_artifact_count }}/{{ total_artifacts_display }}</span></dd>
+                        <dt class="col-sm-5">Downloaded</dt>
+                        <dd class="col-sm-7"><span id="download-total-text">{{ initial_downloaded_bytes|default:0|filesizeformat }}</span></dd>
+                        <dt class="col-sm-5">Analysis</dt>
+                        <dd class="col-sm-7" id="analysis-mode-display">{{ latest_analysis_label|default:"—" }}</dd>
+                        <dt class="col-sm-5">Artifacts requested</dt>
+                        <dd class="col-sm-7" id="artifact-limit-display">
+                            {% with limit=latest_import.notes.artifact_limit %}
+                                {% if limit %}
+                                    {{ limit }}{% if limit == total_artifacts_defined %} (all){% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endwith %}
+                        </dd>
+                    </dl>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span id="download-progress-text">{{ downloaded_artifact_count }}/{{ total_artifacts_display }} artifacts processed</span>
+                            <span id="download-bytes-text">{{ initial_downloaded_bytes|default:0|filesizeformat }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" id="download-progress-bar" role="progressbar"
+                                style="width: {{ download_progress_pct }}%" aria-valuenow="{{ download_progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No imports have been launched yet.</p>
+                {% endif %}
+                {% if dataset.supported %}
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="start-import">
+                        <div class="mb-3">
+                            {% if total_artifacts_defined > 1 %}
+                                <label for="artifact-limit" class="form-label">Artifacts to download</label>
+                                <select class="form-select" id="artifact-limit" name="artifact_limit">
+                                    {% for option in artifact_limit_options %}
+                                        <option value="{{ option }}" {% if selected_artifact_limit == option %}selected{% endif %}>{{ option }}{% if option == total_artifacts_defined %} (all){% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Select how many source artifacts to download from the catalog.</div>
+                            {% else %}
+                                <input type="hidden" name="artifact_limit" value="{{ selected_artifact_limit }}">
+                                <p class="text-muted small mb-0">All available artifacts will be downloaded.</p>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary" {% if not can_launch %}disabled{% endif %}>Start Import</button>
+                        {% if not can_launch %}
+                            <p class="text-muted small mb-0 mt-2">An import is already in progress. Refresh the page for updates.</p>
+                        {% endif %}
+                    </form>
+                    <form method="post" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset-import">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" {% if not latest_import %}disabled{% endif %}>
+                            Reset Import
+                        </button>
+                        <p class="small text-muted mt-1 mb-0">Clears the latest import run and downloaded files.</p>
+                    </form>
+
+                    <!-- Analysis Controls -->
+                    {% if can_analyze %}
+                    <hr class="my-3">
+                    <h6 class="mb-3">Analysis</h6>
+                    <button type="button" class="btn btn-success btn-sm" id="start-analysis-btn">
+                        Analyze Data
+                    </button>
+                    <p class="text-muted small mt-2 mb-0">Files are downloaded and ready for topical analysis.</p>
+                    {% elif is_analyzing %}
+                    <hr class="my-3">
+                    <h6 class="mb-3">Analysis</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-info me-2" role="status" aria-hidden="true"></div>
+                        <span class="text-info">Analysis in progress...</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div class="progress-bar bg-info" role="progressbar" id="analysis-progress" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p class="small text-muted mt-1 mb-0" id="analysis-message">Starting analysis...</p>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-secondary mt-3" role="alert">
+                        Pipeline integration is pending for this dataset.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Analysis Approach</h5>
+                <p class="small text-muted mb-3">Choose how downloaded files should be analyzed. Apply changes once at least one file is available.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update-analysis">
+                    {% for value, label in analysis_modes %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="analysis_mode" id="analysis-option-{{ value }}" value="{{ value }}" {% if selected_analysis_mode == value %}checked{% endif %} {% if not analysis_selection_enabled or not request.user.is_staff %}disabled{% endif %}>
+                            <label class="form-check-label" for="analysis-option-{{ value }}">{{ label }}</label>
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm mt-3" {% if not analysis_selection_enabled or not request.user.is_staff %}disabled{% endif %}>Explore</button>
+                </form>
+                {% if not request.user.is_staff %}
+                    <p class="small text-muted mt-2 mb-0">Staff access is required to change the analysis approach.</p>
+                {% elif not analysis_selection_enabled %}
+                    <p class="small text-muted mt-2 mb-0">Download at least one artifact to enable analysis selection.</p>
+                {% endif %}
+                <div id="analysis-summary-block">
+                    {% if analysis_summary %}
+                        <hr>
+                        <div class="mb-2">
+                            <h6 class="mb-1">Topical Overview</h6>
+                            {% if analysis_summary.status == 'ok' %}
+                                <p class="small text-muted mb-2">Sampled {{ analysis_summary.sampled_messages }} messages. Keywords and snippets below are approximations.</p>
+                                <div class="d-flex flex-column gap-2">
+                                    {% for topic in analysis_summary.topics %}
+                                        <div class="border rounded p-2 bg-light">
+                                            <div class="fw-semibold small text-uppercase text-muted">{{ topic.label }}</div>
+                                            <div class="small">Keywords: <span class="font-monospace">{{ topic.keywords|join:', ' }}</span></div>
+                                            {% if topic.sample %}
+                                                <div class="small text-muted mt-1">{{ topic.sample|truncatechars:180 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="small text-muted mb-0">{{ analysis_summary.message }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <h2 class="mt-4">Artifacts</h2>
+        <table class="table table-striped table-hover align-middle" id="artifact-table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Filename</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Downloaded</th>
+                    <th scope="col">Processed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in artifact_rows %}
+                    <tr>
+                        <td>{{ row.sequence }}</td>
+                        <td>
+                            <div>
+                                {% if row.file_url %}
+                                    <a href="{{ row.file_url }}" target="_blank" rel="noopener">{{ row.definition.filename }}</a>
+                                {% else %}
+                                    {{ row.definition.filename }}
+                                {% endif %}
+                                {% if row.extension %}
+                                    <span class="small text-muted ms-2">.{{ row.extension }}</span>
+                                {% endif %}
+                            </div>
+                            {% if row.definition.notes %}
+                                <div class="small text-muted">{{ row.definition.notes }}</div>
+                            {% endif %}
+                            {% if row.preview.row_count or row.preview.sample_row or row.preview.note or row.preview.error %}
+                                <div class="small text-muted mt-1" data-role="preview-summary">
+                                    {% if row.preview.row_count %}
+                                        <span>Rows: {{ row.preview.row_count }}</span>
+                                    {% endif %}
+                                    {% if row.preview.note %}
+                                        {% if row.preview.row_count %}<span class="mx-1">•</span>{% endif %}
+                                        <span>{{ row.preview.note }}</span>
+                                    {% endif %}
+                                    {% if row.preview.error %}
+                                        {% if row.preview.row_count or row.preview.note %}<span class="mx-1">•</span>{% endif %}
+                                        <span class="text-danger">Preview failed: {{ row.preview.error }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if row.preview.sample_row %}
+                                    <pre class="small bg-light border rounded p-2 mt-1" data-role="preview-sample">{{ row.preview.sample_row }}</pre>
+                                {% endif %}
+                            {% endif %}
+                            {% if row.download_progress_pct is not None %}
+                                {% if row.status == 'downloading' or row.status == 'downloaded' %}
+                                    <div class="progress mt-2" style="height: 4px;" data-role="artifact-progress">
+                                        <div class="progress-bar bg-info" role="progressbar"
+                                             style="width: {{ row.download_progress_pct }}%"
+                                             aria-valuenow="{{ row.download_progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="small text-muted" data-role="artifact-progress-text">{{ row.download_progress_pct }}% downloaded</div>
+                                {% endif %}
+                            {% endif %}
+                            {% if row.checksum or row.content_type or row.metadata_items %}
+                                <div class="small text-muted mt-1">
+                                    {% if row.checksum %}
+                                        Checksum: <span class="font-monospace">{{ row.checksum }}</span>
+                                    {% endif %}
+                                    {% if row.content_type %}
+                                        {% if row.checksum %}<span class="mx-1">•</span>{% endif %}
+                                        {{ row.content_type }}
+                                    {% endif %}
+                                </div>
+                                {% if row.metadata_items %}
+                                    <ul class="list-unstyled small text-muted mb-0 mt-1">
+                                        {% for item in row.metadata_items %}
+                                            <li>{{ item.key }}: {{ item.value }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {{ row.status_badge_class|default:'bg-secondary' }}">
+                                {% if row.status_show_check %}<span aria-hidden="true" class="me-1">&#10003;</span>{% endif %}
+                                <span>{{ row.status_label }}</span>
+                            </span>
+                        </td>
+                        <td>
+                            {% if row.status == 'not-requested' %}
+                                —
+                            {% else %}
+                                {{ row.downloaded_bytes|filesizeformat }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.status == 'not-requested' %}
+                                —
+                            {% else %}
+                                {{ row.processed_bytes|filesizeformat }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No artifacts defined.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+function escapeHtmlString(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderSummaryMarkup(summary) {
+  if (!summary) {
+    return '';
+  }
+  if (summary.status && summary.status !== 'ok') {
+    const message = summary.message ? summary.message : 'Analysis summary unavailable.';
+    return `<hr><div class="mb-2"><h6 class="mb-1">Topical Overview</h6><p class="small text-muted mb-0">${escapeHtmlString(message)}</p></div>`;
+  }
+
+  const topics = Array.isArray(summary.topics) ? summary.topics : [];
+  const sampled = summary.sampled_messages || 0;
+  const topicMarkup = topics.map((topic) => {
+    const title = escapeHtmlString(topic.label || 'Theme');
+    const keywords = Array.isArray(topic.keywords) ? topic.keywords.map(escapeHtmlString).join(', ') : '';
+    const rawSample = topic.sample ? String(topic.sample) : '';
+    const truncated = rawSample.length > 180 ? `${rawSample.slice(0, 180)}…` : rawSample;
+    const snippet = rawSample ? `<div class="small text-muted mt-1">${escapeHtmlString(truncated)}</div>` : '';
+    return `<div class="border rounded p-2 bg-light">
+        <div class="fw-semibold small text-uppercase text-muted">${title}</div>
+        <div class="small">Keywords: <span class="font-monospace">${keywords}</span></div>
+        ${snippet}
+      </div>`;
+  }).join('');
+
+  const header = `<p class="small text-muted mb-2">Sampled ${sampled} messages. Keywords and snippets below are approximations.</p>`;
+  return `<hr><div class="mb-2"><h6 class="mb-1">Topical Overview</h6>${header}<div class="d-flex flex-column gap-2">${topicMarkup}</div></div>`;
+}
+
+(function() {
+  const container = document.querySelector('[data-status-url]');
+  if (!container) { return; }
+
+  const statusUrl = container.getAttribute('data-status-url');
+  const streamUrl = container.getAttribute('data-stream-url');
+  const statusLabel = document.getElementById('status-label');
+  const statusLabelText = document.getElementById('status-label-text');
+  const statusCheck = statusLabel ? statusLabel.querySelector('.status-check') : null;
+  const analysisDisplay = document.getElementById('analysis-mode-display');
+  const artifactLimitDisplay = document.getElementById('artifact-limit-display');
+  const tableBody = document.querySelector('#artifact-table tbody');
+  const downloadProgressBar = document.getElementById('download-progress-bar');
+  const downloadProgressText = document.getElementById('download-progress-text');
+  const downloadBytesText = document.getElementById('download-bytes-text');
+  const artifactCountText = document.getElementById('artifact-count-text');
+  const downloadTotalText = document.getElementById('download-total-text');
+  const summaryBlock = document.getElementById('analysis-summary-block');
+
+  let pollTimer = null;
+  let eventSource = null;
+
+  function formatBytes(bytes) {
+    if (!bytes || bytes <= 0) return '0 bytes';
+    const thresh = 1024;
+    const units = ['bytes', 'KB', 'MB', 'GB', 'TB'];
+    let u = 0;
+    let value = bytes;
+    while (value >= thresh && u < units.length - 1) {
+      value /= thresh;
+      u += 1;
+    }
+    return value.toFixed(1) + ' ' + units[u];
+  }
+
+  function formatAnalysisMode(mode) {
+    if (!mode) { return '—'; }
+    const labels = {
+      'top-down': 'Top-down (seeded topics)',
+      'bottom-up': 'Bottom-up (clustering-first)',
+      'hybrid': 'Hybrid (combine both)',
+    };
+    if (Object.prototype.hasOwnProperty.call(labels, mode)) {
+      return labels[mode];
+    }
+    return mode;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function applyState(data) {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+
+    if (statusLabel) {
+      const badgeClass = data.status_badge_class ? `badge ${data.status_badge_class}` : 'badge bg-secondary';
+      statusLabel.className = badgeClass;
+    }
+    if (statusLabelText && data.status_label) {
+      statusLabelText.textContent = data.status_label;
+    }
+    if (statusCheck && typeof data.status_show_check === 'boolean') {
+      statusCheck.classList.toggle('d-none', !data.status_show_check);
+    }
+    if (analysisDisplay && Object.prototype.hasOwnProperty.call(data, 'analysis_mode')) {
+      analysisDisplay.textContent = formatAnalysisMode(data.analysis_mode);
+    }
+    if (artifactLimitDisplay && Object.prototype.hasOwnProperty.call(data, 'artifact_limit')) {
+      if (data.artifact_limit) {
+        const totalArtifacts = data.total_artifacts || 0;
+        const suffix = totalArtifacts && data.artifact_limit >= totalArtifacts ? ' (all)' : '';
+        artifactLimitDisplay.textContent = `${data.artifact_limit}${suffix}`;
+      } else {
+        artifactLimitDisplay.textContent = '—';
+      }
+    }
+
+    if (downloadProgressBar && data.download_progress !== undefined) {
+      const pct = Math.max(0, Math.min(Number(data.download_progress || 0), 100));
+      downloadProgressBar.style.width = `${pct}%`;
+      downloadProgressBar.setAttribute('aria-valuenow', pct.toString());
+    }
+
+    if (downloadProgressText && (data.downloaded_artifacts !== undefined || data.processed_artifacts !== undefined)) {
+      const processed = (data.downloaded_artifacts ?? data.processed_artifacts) ?? 0;
+      const total = data.total_artifacts ?? 0;
+      downloadProgressText.textContent = `${processed}/${total} artifacts processed`;
+    }
+
+    if (artifactCountText && data.downloaded_artifacts !== undefined) {
+      const total = data.total_artifacts ?? 0;
+      artifactCountText.textContent = `${data.downloaded_artifacts}/${total}`;
+    }
+
+    if (downloadBytesText && data.downloaded_bytes !== undefined) {
+      downloadBytesText.textContent = formatBytes(data.downloaded_bytes);
+    }
+    if (downloadTotalText && data.downloaded_bytes !== undefined) {
+      downloadTotalText.textContent = formatBytes(data.downloaded_bytes);
+    }
+
+    if (summaryBlock) {
+      summaryBlock.innerHTML = renderSummaryMarkup(data.analysis_summary || null);
+    }
+
+    if (tableBody && Array.isArray(data.artifacts)) {
+      const rows = data.artifacts.map((artifact, index) => {
+        const badgeClass = artifact.status_badge_class ? artifact.status_badge_class : 'bg-secondary';
+        const label = escapeHtml(artifact.status_label || artifact.status || '');
+        const check = artifact.status_show_check ? '<span aria-hidden="true" class="me-1">&#10003;</span>' : '';
+        const sequence = artifact.sequence || index + 1;
+        const notes = artifact.notes ? `<div class="small text-muted">${escapeHtml(artifact.notes)}</div>` : '';
+        const extension = artifact.extension ? `<span class="small text-muted ms-2">.${escapeHtml(artifact.extension)}</span>` : '';
+        const filenameLink = artifact.file_url
+          ? `<a href="${escapeHtml(artifact.file_url)}" target="_blank" rel="noopener">${escapeHtml(artifact.filename)}</a>`
+          : escapeHtml(artifact.filename);
+        const downloaded = artifact.status === 'not-requested' ? '—' : formatBytes(artifact.downloaded_bytes);
+        const processed = artifact.status === 'not-requested' ? '—' : formatBytes(artifact.processed_bytes);
+
+        const metaParts = [];
+        if (artifact.checksum) {
+          const checksum = escapeHtml(String(artifact.checksum));
+          metaParts.push(`Checksum: <span class="font-monospace">${checksum}</span>`);
+        }
+        if (artifact.content_type) {
+          metaParts.push(escapeHtml(artifact.content_type));
+        }
+        if (artifact.finished_at) {
+          const finished = new Date(artifact.finished_at);
+          if (!Number.isNaN(finished.getTime())) {
+            metaParts.push(`Completed ${finished.toLocaleString()}`);
+          }
+        }
+        const metadataExtras = metaParts.length
+          ? `<div class="small text-muted mt-1">${metaParts.join('<span class=\"mx-1\">•</span>')}</div>`
+          : '';
+
+        const metadataList = Array.isArray(artifact.metadata_items) && artifact.metadata_items.length
+          ? `<ul class="list-unstyled small text-muted mb-0 mt-1">${artifact.metadata_items
+              .map(item => `<li>${escapeHtml(item.key)}: ${escapeHtml(item.value)}</li>`)
+              .join('')}</ul>`
+          : '';
+
+        const preview = artifact.preview || {};
+        const previewSegments = [];
+        if (preview.row_count !== undefined && preview.row_count !== null) {
+          previewSegments.push(`Rows: ${escapeHtml(String(preview.row_count))}`);
+        }
+        if (preview.note) {
+          previewSegments.push(escapeHtml(preview.note));
+        }
+        if (preview.error) {
+          previewSegments.push(`<span class="text-danger">Preview failed: ${escapeHtml(preview.error)}</span>`);
+        }
+        const previewSummary = previewSegments.length
+          ? `<div class="small text-muted mt-1" data-role="preview-summary">${previewSegments.join('<span class=\"mx-1\">•</span>')}</div>`
+          : '';
+        const previewSample = preview.sample_row
+          ? `<pre class="small bg-light border rounded p-2 mt-1" data-role="preview-sample">${escapeHtml(preview.sample_row)}</pre>`
+          : '';
+
+        const showProgress = artifact.download_progress_pct !== undefined && artifact.download_progress_pct !== null
+          && (artifact.status === 'downloading' || artifact.status === 'downloaded');
+        const clampedProgress = showProgress
+          ? Math.max(0, Math.min(100, Number(artifact.download_progress_pct)))
+          : 0;
+        const progressMarkup = showProgress
+          ? `<div class="progress mt-2" style="height:4px;" data-role="artifact-progress">
+              <div class="progress-bar bg-info" role="progressbar" style="width: ${clampedProgress}%" aria-valuenow="${clampedProgress}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="small text-muted" data-role="artifact-progress-text">${clampedProgress}% downloaded</div>`
+          : '';
+
+        return `
+          <tr>
+              <td>${sequence}</td>
+              <td><div>${filenameLink}${extension}</div>${notes}${previewSummary}${previewSample}${progressMarkup}${metadataExtras}${metadataList}</td>
+              <td><span class="badge ${badgeClass}">${check}<span>${label}</span></span></td>
+              <td>${downloaded}</td>
+              <td>${processed}</td>
+          </tr>`;
+      }).join('');
+      if (rows) {
+        tableBody.innerHTML = rows;
+      }
+    }
+
+    const analysisProgress = document.getElementById('analysis-progress');
+    const analysisMessage = document.getElementById('analysis-message');
+    if (analysisProgress && data.analysis_progress !== undefined) {
+      analysisProgress.style.width = `${data.analysis_progress}%`;
+      analysisProgress.setAttribute('aria-valuenow', data.analysis_progress);
+    }
+    if (analysisMessage && data.analysis_message) {
+      analysisMessage.textContent = data.analysis_message;
+    }
+  }
+
+  async function refreshStatus() {
+    if (!statusUrl) {
+      return;
+    }
+    try {
+      const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) { return; }
+      const data = await response.json();
+      applyState(data);
+    } catch (err) {
+      console.warn('Status refresh failed', err);
+    }
+  }
+
+  function startPolling() {
+    if (pollTimer) { return; }
+    refreshStatus();
+    pollTimer = setInterval(refreshStatus, 3000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function startStream() {
+    if (!window.EventSource || !streamUrl) {
+      startPolling();
+      return;
+    }
+    if (eventSource) {
+      return;
+    }
+
+    eventSource = new EventSource(streamUrl);
+    eventSource.onopen = () => {
+      stopPolling();
+    };
+    eventSource.onmessage = (event) => {
+      if (!event.data) { return; }
+      try {
+        const payload = JSON.parse(event.data);
+        applyState(payload);
+      } catch (error) {
+        console.warn('Failed to parse stream payload', error);
+      }
+    };
+    eventSource.onerror = () => {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      startPolling();
+      setTimeout(() => {
+        if (!eventSource) {
+          startStream();
+        }
+      }, 10000);
+    };
+  }
+
+  const analysisBtn = document.getElementById('start-analysis-btn');
+  if (analysisBtn) {
+    analysisBtn.addEventListener('click', async function() {
+      analysisBtn.disabled = true;
+      analysisBtn.textContent = 'Starting...';
+
+      try {
+        const analyzeUrl = statusUrl.replace('/status/', '/analyze/');
+        const response = await fetch(analyzeUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+          }
+        });
+
+        if (response.ok) {
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          const error = await response.json();
+          alert(`Analysis failed: ${error.error || 'Unknown error'}`);
+          analysisBtn.disabled = false;
+          analysisBtn.textContent = 'Analyze Data';
+        }
+      } catch (err) {
+        console.error('Analysis request failed:', err);
+        alert('Analysis request failed. Please try again.');
+        analysisBtn.disabled = false;
+        analysisBtn.textContent = 'Analyze Data';
+      }
+    });
+  }
+
+  refreshStatus();
+  startStream();
+
+  window.addEventListener('beforeunload', () => {
+    stopPolling();
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+  });
+})();
+</script>

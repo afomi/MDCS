@@ -1,0 +1,205 @@
+[
+  {
+    "id": "wildchat",
+    "name": "WildChat-1M",
+    "description": "Conversational dataset of real-world support transcripts sourced from Hugging Face (AllenAI).",
+    "notes": "Downloads all 14 parquet shards (~3.4 GB total).",
+    "artifacts": [
+      {
+        "filename": "wildchat-1m/train-00000-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00000-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00001-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00001-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00002-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00002-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00003-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00003-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00004-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00004-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00005-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00005-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00006-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00006-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00007-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00007-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00008-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00008-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00009-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00009-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00010-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00010-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00011-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00011-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00012-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00012-of-00014.parquet"
+      },
+      {
+        "filename": "wildchat-1m/train-00013-of-00014.parquet",
+        "download_url": "https://huggingface.co/datasets/allenai/WildChat-1M/resolve/main/data/train-00013-of-00014.parquet"
+      }
+    ],
+    "adapter": "parquet-conversations"
+  },
+  {
+    "id": "oasst1",
+    "name": "OpenAssistant Conversations (OASST1)",
+    "description": "Multilingual assistant-style conversations collected by the OpenAssistant project.",
+    "notes": "Includes messages, trees, prompts, and spam splits (Apache-2.0).",
+    "artifacts": [
+      {
+        "filename": "oasst1/2023-04-12_oasst_all.messages.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/2023-04-12_oasst_all.messages.jsonl.gz"
+      },
+      {
+        "filename": "oasst1/2023-04-12_oasst_all.trees.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/2023-04-12_oasst_all.trees.jsonl.gz"
+      },
+      {
+        "filename": "oasst1/2023-04-12_oasst_prompts.messages.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/2023-04-12_oasst_prompts.messages.jsonl.gz"
+      },
+      {
+        "filename": "oasst1/2023-04-12_oasst_ready.messages.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/2023-04-12_oasst_ready.messages.jsonl.gz"
+      },
+      {
+        "filename": "oasst1/2023-04-12_oasst_ready.trees.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/2023-04-12_oasst_ready.trees.jsonl.gz"
+      },
+      {
+        "filename": "oasst1/2023-04-12_oasst_spam.messages.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/2023-04-12_oasst_spam.messages.jsonl.gz"
+      }
+    ],
+    "adapter": "oasst-messages"
+  },
+  {
+    "id": "lmsys_chat_1m",
+    "name": "LMSYS-Chat-1M",
+    "description": "Large-scale chat dataset released by LMSYS for conversational modeling.",
+    "notes": "Downloads all 6 parquet shards (~1.5 GB total).",
+    "artifacts": [
+      {
+        "filename": "lmsys-chat-1m/train-00000-of-00006-4feeb3f83346a0e9.parquet",
+        "download_url": "https://huggingface.co/datasets/lmsys/lmsys-chat-1m/resolve/main/data/train-00000-of-00006-4feeb3f83346a0e9.parquet"
+      },
+      {
+        "filename": "lmsys-chat-1m/train-00001-of-00006-4030672591c2f478.parquet",
+        "download_url": "https://huggingface.co/datasets/lmsys/lmsys-chat-1m/resolve/main/data/train-00001-of-00006-4030672591c2f478.parquet"
+      },
+      {
+        "filename": "lmsys-chat-1m/train-00002-of-00006-1779b7cec9462180.parquet",
+        "download_url": "https://huggingface.co/datasets/lmsys/lmsys-chat-1m/resolve/main/data/train-00002-of-00006-1779b7cec9462180.parquet"
+      },
+      {
+        "filename": "lmsys-chat-1m/train-00003-of-00006-2fa862bfed56af1f.parquet",
+        "download_url": "https://huggingface.co/datasets/lmsys/lmsys-chat-1m/resolve/main/data/train-00003-of-00006-2fa862bfed56af1f.parquet"
+      },
+      {
+        "filename": "lmsys-chat-1m/train-00004-of-00006-18f4bdd50c103e71.parquet",
+        "download_url": "https://huggingface.co/datasets/lmsys/lmsys-chat-1m/resolve/main/data/train-00004-of-00006-18f4bdd50c103e71.parquet"
+      },
+      {
+        "filename": "lmsys-chat-1m/train-00005-of-00006-fe1acc5d10a9f0e2.parquet",
+        "download_url": "https://huggingface.co/datasets/lmsys/lmsys-chat-1m/resolve/main/data/train-00005-of-00006-fe1acc5d10a9f0e2.parquet"
+      }
+    ],
+    "adapter": "parquet-conversations"
+  },
+  {
+    "id": "sharegpt",
+    "name": "ShareGPT Vicuna Conversations",
+    "description": "ShareGPT crowdsourced instruction-following conversations (Vicuna unfiltered split).",
+    "notes": "Two JSON variants provided; each is ~670 MB. Review licensing before redistribution.",
+    "artifacts": [
+      {
+        "filename": "sharegpt/ShareGPT_V3_unfiltered_cleaned_split.json",
+        "download_url": "https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
+      },
+      {
+        "filename": "sharegpt/ShareGPT_V3_unfiltered_cleaned_split_no_imsorry.json",
+        "download_url": "https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split_no_imsorry.json"
+      }
+    ],
+    "adapter": "json-conversation-array"
+  },
+  {
+    "id": "hh_rlhf",
+    "name": "Anthropic HH-RLHF",
+    "description": "Anthropic helpful/harmless preference data for reinforcement learning from human feedback.",
+    "notes": "Includes harmless prompts and red-team attempts; requires HF token for gated files.",
+    "artifacts": [
+      {
+        "filename": "hh-rlhf/harmless-base/train.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/Anthropic/hh-rlhf/resolve/main/harmless-base/train.jsonl.gz"
+      },
+      {
+        "filename": "hh-rlhf/red-team-attempts/red_team_attempts.jsonl.gz",
+        "download_url": "https://huggingface.co/datasets/Anthropic/hh-rlhf/resolve/main/red-team-attempts/red_team_attempts.jsonl.gz"
+      }
+    ],
+    "adapter": null
+  },
+  {
+    "id": "real_toxicity_prompts",
+    "name": "RealToxicityPrompts",
+    "description": "AllenAI prompts with toxicity scores for stress-testing unsafe generations.",
+    "notes": "Contains JSONL split with prompts and reference continuations.",
+    "artifacts": [
+      {
+        "filename": "real-toxicity-prompts/prompts.jsonl",
+        "download_url": "https://huggingface.co/datasets/allenai/real-toxicity-prompts/resolve/main/prompts.jsonl"
+      }
+    ],
+    "adapter": null
+  },
+  {
+    "id": "wizardlm_evol_instruct",
+    "name": "WizardLM Evol-Instruct V2",
+    "description": "WizardLM evol-instruct dataset (V2 196k) for complex instruction following.",
+    "notes": "Single JSON file (~357 MB) under WizardLM open license.",
+    "artifacts": [
+      {
+        "filename": "wizardlm/WizardLM_evol_instruct_V2_143k.json",
+        "download_url": "https://huggingface.co/datasets/WizardLMTeam/WizardLM_evol_instruct_V2_196k/resolve/main/WizardLM_evol_instruct_V2_143k.json"
+      }
+    ],
+    "adapter": "json-conversation-array"
+  },
+  {
+    "id": "supportdesk",
+    "name": "SupportDesk",
+    "description": "Internal ticket exports used for customer support modeling.",
+    "notes": "Placeholder artifact until internal export is wired up.",
+    "artifacts": [
+      {
+        "filename": "supportdesk/supportdesk.csv"
+      }
+    ],
+    "adapter": null
+  }
+]

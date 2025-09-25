@@ -43,6 +43,16 @@ Menu.add_item(
 )
 
 Menu.add_item(
+    "nodropdown",
+    MenuItem("Datasets", reverse("dataset_imports:catalog"), icon="database"),
+)
+
+Menu.add_item(
+    "nodropdown",
+    MenuItem("Explore", reverse("dataset_imports:explore"), icon="chart-line"),
+)
+
+Menu.add_item(
     "nodropdown", MenuItem(CURATE_MENU_NAME, reverse("core_curate_index"))
 )
 Menu.add_item(

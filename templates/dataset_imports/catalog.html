@@ -1,0 +1,215 @@
+{% extends "theme.html" %}
+
+{% block app_data %}
+<style>
+  .ingestion-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+  @media (min-width: 768px) {
+    .ingestion-grid {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+  }
+  .ingestion-card .progress {
+    height: 8px;
+  }
+  .dataset-summary {
+    max-width: 100%;
+  }
+  .dataset-summary [data-field="description"],
+  .dataset-summary [data-field="notes"] {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    display: block;
+  }
+</style>
+
+<div class="ingestion-wrapper">
+  <h1 class="mb-3">Datasets</h1>
+  <p class="text-muted mb-4">Browse and import datasets. Datasets are managed in a .json file for now.</p>
+
+  {% if not user_is_staff %}
+  <div class="alert alert-warning" role="alert">
+    Staff access is required to launch or reset ingestion jobs. You can still inspect dataset details below.
+  </div>
+  {% endif %}
+
+  <div class="ingestion-grid">
+    {% for entry in datasets %}
+      {% with dataset=entry.dataset %}
+      <section
+        class="card ingestion-card h-100"
+        data-dataset-card
+        data-dataset-id="{{ dataset.id }}"
+        data-status-url="{{ entry.status_url }}"
+        data-detail-url="{{ entry.detail_url }}"
+        data-supported="{{ dataset.supported|yesno:'true,false' }}"
+        data-can-control="{{ user_is_staff|yesno:'true,false' }}"
+      >
+        <div class="card-body d-flex flex-column gap-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div class="dataset-summary">
+              <h2 class="h4 mb-1" data-field="name">{{ dataset.name }}</h2>
+              <p class="mb-1 text-muted small" data-field="description">{{ dataset.description }}</p>
+              {% if dataset.notes %}
+              <p class="small text-muted mb-2" data-field="notes">{{ dataset.notes }}</p>
+              {% endif %}
+              <ul class="list-unstyled small text-muted mb-0">
+                <li data-field="artifact-count">Artifacts: {{ entry.total_artifacts_defined }}</li>
+                {% if dataset.source_url %}
+                <li data-field="source">Source: <a href="{{ dataset.source_url }}" target="_blank" rel="noopener">{{ dataset.source_url }}</a></li>
+                {% endif %}
+                {% if dataset.license %}
+                <li data-field="license">License: {{ dataset.license }}</li>
+                {% endif %}
+              </ul>
+            </div>
+            <span class="badge {{ entry.status_badge_class|default:'bg-secondary' }}" data-role="status-badge">
+              <span class="me-1" data-role="status-check" aria-hidden="true" {% if not entry.status_show_check %}style="display:none"{% endif %}>&#10003;</span>
+              <span data-role="status-label">{{ entry.status }}</span>
+            </span>
+          </div>
+
+          <div class="d-flex flex-column gap-2">
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-role="progress-value" style="width:0%"></div>
+            </div>
+            <div class="d-flex justify-content-between small text-muted">
+              <span data-role="progress-text">No artifacts processed yet</span>
+              <span data-role="bytes-text">0 bytes downloaded</span>
+            </div>
+            <div class="small text-muted" data-role="timestamp"></div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            {% if not dataset.supported %}
+              <span class="badge bg-secondary">Pipeline pending</span>
+            {% endif %}
+            <a class="btn btn-primary btn-sm" href="{{ entry.detail_url }}">Open dataset</a>
+          </div>
+          {% if entry.artifact_limit and entry.artifact_limit < entry.total_artifacts_defined %}
+          <div class="small text-muted" data-field="download-limit">Download limit: {{ entry.artifact_limit }} of {{ entry.total_artifacts_defined }}</div>
+          {% endif %}
+        </div>
+      </section>
+      {% endwith %}
+    {% empty %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center text-muted">
+          No datasets configured.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function() {
+  const cards = document.querySelectorAll('[data-dataset-card]');
+  if (!cards.length) {
+    return;
+  }
+
+  const ACTIVE_STATUSES = new Set(['pending', 'queued', 'downloading', 'processing', 'analyzing']);
+
+  function formatBytes(bytes) {
+    const n = Number(bytes || 0);
+    if (!n) {
+      return '0 bytes';
+    }
+    const units = ['bytes', 'KB', 'MB', 'GB', 'TB'];
+    let value = n;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit += 1;
+    }
+    return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+  }
+
+  function updateBadge(badge, state) {
+    if (!badge || !state) {
+      return;
+    }
+    badge.className = `badge ${state.status_badge_class || 'bg-secondary'}`;
+    const label = badge.querySelector('[data-role="status-label"]');
+    const check = badge.querySelector('[data-role="status-check"]');
+    if (label) {
+      label.textContent = state.status_label || state.status || 'Unknown';
+    }
+    if (check) {
+      check.style.display = state.status_show_check ? '' : 'none';
+    }
+  }
+
+  cards.forEach((card) => {
+    const statusUrl = card.dataset.statusUrl;
+    const supported = card.dataset.supported === 'true';
+
+    const statusBadge = card.querySelector('[data-role="status-badge"]');
+    const progressBar = card.querySelector('[data-role="progress-value"]');
+    const progressText = card.querySelector('[data-role="progress-text"]');
+    const bytesText = card.querySelector('[data-role="bytes-text"]');
+    const timestampText = card.querySelector('[data-role="timestamp"]');
+
+    let pollTimer = null;
+
+    function schedulePoll(state) {
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+      }
+      if (state && ACTIVE_STATUSES.has(state.status)) {
+        pollTimer = setTimeout(() => {
+          refreshState(false);
+        }, 5000);
+      }
+    }
+
+    function updateState(state) {
+      if (!state) {
+        return;
+      }
+      updateBadge(statusBadge, state);
+
+      if (progressBar) {
+        const pct = Number(state.download_progress || 0);
+        progressBar.style.width = `${Math.max(0, Math.min(pct, 100))}%`;
+        progressBar.setAttribute('aria-valuenow', pct.toString());
+      }
+      if (progressText) {
+        const processed = state.processed_artifacts || 0;
+        const total = state.total_artifacts || 0;
+        if (total) {
+          progressText.textContent = `${processed}/${total} artifacts processed`;
+        } else {
+          progressText.textContent = 'No artifacts processed yet';
+        }
+      }
+      if (bytesText) {
+        bytesText.textContent = `${formatBytes(state.downloaded_bytes)} downloaded`;
+      }
+      if (timestampText) {
+        timestampText.textContent = state.updated_at ? `Updated ${new Date(state.updated_at).toLocaleString()}` : '';
+      }
+    }
+
+    async function refreshState(showMessage = true) {
+      try {
+        const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch status (${response.status})`);
+        }
+        const state = await response.json();
+        updateState(state);
+        schedulePoll(state);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    refreshState();
+  });
+})();
+</script>
+{% endblock %}

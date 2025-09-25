@@ -1,0 +1,302 @@
+{% extends "theme.html" %}
+
+{% block app_data %}
+<style>
+  .explore-layout {
+    display: grid;
+    gap: 1.5rem;
+  }
+  @media (min-width: 992px) {
+    .explore-layout {
+      grid-template-columns: 380px 1fr;
+      align-items: start;
+    }
+  }
+  .explore-wrapper {
+    min-height: calc(100vh - 140px);
+  }
+  .explore-layout > section {
+    display: flex;
+    flex-direction: column;
+  }
+  .dataset-pane-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .dataset-pane-card .card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .dataset-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+  .dataset-list .list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+  }
+  .dataset-list .list-group-item.active .text-muted {
+    color: rgba(255, 255, 255, 0.65) !important;
+  }
+  .analysis-card .progress {
+    height: 6px;
+  }
+</style>
+
+<div class="explore-wrapper explore-layout">
+  <section>
+    <h1 class="h4 mb-3">1. Choose a dataset</h1>
+    <div class="card dataset-pane-card">
+      <div class="card-body">
+        <p class="small text-muted mb-3">Select a dataset to inspect its download status and enable analysis controls.</p>
+        <ul class="list-group dataset-list">
+          {% for entry in datasets %}
+            {% with dataset=entry.dataset state=entry.state %}
+              <li class="list-group-item position-relative {% if entry.selected %}active{% endif %}">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div class="fw-semibold">{{ dataset.name }}</div>
+                  <span class="badge {{ state.status_badge_class|default:'bg-secondary' }}">{{ state.status_label }}</span>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mt-2">
+                  <span>{{ state.processed_artifacts }}/{{ state.total_artifacts }} artifacts processed</span>
+                  <span>{{ state.downloaded_bytes|filesizeformat }} downloaded</span>
+                </div>
+                <a class="stretched-link" href="{% url 'dataset_imports:explore' %}?dataset={{ dataset.id }}" aria-label="Select {{ dataset.name }}"></a>
+              </li>
+            {% endwith %}
+          {% empty %}
+            <li class="list-group-item text-muted text-center">No datasets configured.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h4 mb-3">2. Choose analysis approach</h2>
+    {% if not active_entry %}
+      <div class="alert alert-secondary" role="alert">
+        Select a dataset on the left to configure its analysis.
+      </div>
+    {% else %}
+      {% with dataset=active_entry.dataset state=active_entry.state %}
+      <div class="card analysis-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h3 class="h5 mb-1">{{ dataset.name }}</h3>
+            </div>
+            <a class="btn btn-link btn-sm" href="{{ active_entry.detail_url }}">View Dataset</a>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span>Ingestion progress</span>
+              <span>{{ state.processed_artifacts }}/{{ state.total_artifacts }} artifacts processed</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" style="width: {{ state.download_progress|default:0 }}%" aria-valuenow="{{ state.download_progress|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="small text-muted mt-1">{{ state.downloaded_bytes|filesizeformat }} downloaded</div>
+          </div>
+
+          <form id="analysis-form" data-status-url="{{ active_entry.status_url }}" data-analyze-url="{{ active_entry.analyze_url }}" data-supported="{{ dataset.supported|yesno:'true,false' }}">
+            {% csrf_token %}
+            <fieldset class="mb-3" {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}>
+              <legend class="h6">Analysis approach</legend>
+              {% for value, label in analysis_modes %}
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="analysis_mode" id="analysis-{{ value }}" value="{{ value }}"
+                    {% if state.analysis_mode %}
+                      {% if state.analysis_mode == value %}checked{% endif %}
+                    {% elif forloop.first %}
+                      checked
+                    {% endif %}>
+                  <label class="form-check-label" for="analysis-{{ value }}">{{ label }}</label>
+                </div>
+              {% endfor %}
+            </fieldset>
+
+            {% if not user_is_staff %}
+              <p class="small text-muted mt-2 mb-0">Staff access is required to run analysis.</p>
+            {% elif not dataset.supported %}
+              <p class="small text-muted mt-2 mb-0">Pipeline integration pending for this dataset.</p>
+            {% elif not state.downloaded_bytes %}
+              <p class="small text-muted mt-2 mb-0">Download at least one artifact before running analysis.</p>
+            {% endif %}
+
+            <div class="d-flex gap-2 mt-3">
+              <button type="submit" class="btn btn-primary" {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}>Start analysis</button>
+              <a href="{{ active_entry.detail_url }}" class="btn btn-outline-secondary">View Dataset</a>
+            </div>
+            <p class="small text-muted mt-2 mb-0" data-role="analysis-feedback"></p>
+          </form>
+          <div id="explore-summary" class="mt-4">
+            {% if state.analysis_summary %}
+              {% if state.analysis_summary.status == 'ok' %}
+                <div class="alert alert-light border">
+                  <h4 class="h6 mb-2">Topical Overview</h4>
+                  <p class="small text-muted mb-3">Sampled {{ state.analysis_summary.sampled_messages }} messages. Quick-glance themes below.</p>
+                  <div class="d-flex flex-column gap-2">
+                    {% for topic in state.analysis_summary.topics %}
+                      <div class="border rounded p-2">
+                        <div class="fw-semibold small text-uppercase text-muted">{{ topic.label }}</div>
+                        <div class="small">Keywords: <span class="font-monospace">{{ topic.keywords|join:', ' }}</span></div>
+                        {% if topic.sample %}
+                          <div class="small text-muted mt-1">{{ topic.sample|truncatechars:160 }}</div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% else %}
+                <div class="alert alert-light border small text-muted">{{ state.analysis_summary.message }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+    {% endif %}
+  </section>
+</div>
+
+<script>
+function exploreEscapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderExploreSummary(summary) {
+  if (!summary) {
+    return '';
+  }
+  if (summary.status && summary.status !== 'ok') {
+    const message = summary.message ? exploreEscapeHtml(summary.message) : 'Analysis summary unavailable.';
+    return `<div class="alert alert-light border small text-muted">${message}</div>`;
+  }
+
+  const sampled = summary.sampled_messages || 0;
+  const topics = Array.isArray(summary.topics) ? summary.topics : [];
+  const topicMarkup = topics.map((topic) => {
+    const title = exploreEscapeHtml(topic.label || 'Theme');
+    const keywords = Array.isArray(topic.keywords) ? topic.keywords.map(exploreEscapeHtml).join(', ') : '';
+    const rawSample = topic.sample ? String(topic.sample) : '';
+    const truncated = rawSample.length > 160 ? `${rawSample.slice(0, 160)}…` : rawSample;
+    const snippet = rawSample ? `<div class="small text-muted mt-1">${exploreEscapeHtml(truncated)}</div>` : '';
+    return `<div class="border rounded p-2">
+        <div class="fw-semibold small text-uppercase text-muted">${title}</div>
+        <div class="small">Keywords: <span class="font-monospace">${keywords}</span></div>
+        ${snippet}
+      </div>`;
+  }).join('');
+
+  return `<div class="alert alert-light border">
+      <h4 class="h6 mb-2">Topical Overview</h4>
+      <p class="small text-muted mb-3">Sampled ${sampled} messages. Quick-glance themes below.</p>
+      <div class="d-flex flex-column gap-2">${topicMarkup}</div>
+    </div>`;
+}
+
+(function() {
+  const form = document.getElementById('analysis-form');
+  if (!form) {
+    return;
+  }
+
+  const statusUrl = form.dataset.statusUrl;
+  const analyzeUrl = form.dataset.analyzeUrl;
+  const supported = form.dataset.supported === 'true';
+  const submitButton = form.querySelector('button[type="submit"]');
+  const feedbackEl = form.querySelector('[data-role="analysis-feedback"]');
+  const summaryContainer = document.getElementById('explore-summary');
+  const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+
+  async function refreshState() {
+    if (!statusUrl) {
+      return;
+    }
+    try {
+      const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch status (${response.status})`);
+      }
+      const state = await response.json();
+      if (submitButton) {
+        submitButton.disabled = !supported || !state.downloaded_bytes;
+      }
+      if (summaryContainer) {
+        summaryContainer.innerHTML = renderExploreSummary(state.analysis_summary || null);
+      }
+    } catch (error) {
+      console.warn('Failed to refresh status', error);
+    }
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!supported || !analyzeUrl || !submitButton) {
+      return;
+    }
+
+    const selectedMode = form.querySelector('input[name="analysis_mode"]:checked');
+    const payload = {
+      analysis_mode: selectedMode ? selectedMode.value : null,
+    };
+
+    submitButton.disabled = true;
+    submitButton.textContent = 'Starting…';
+    if (feedbackEl) {
+      feedbackEl.textContent = '';
+    }
+
+    try {
+      const response = await fetch(analyzeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfInput ? csrfInput.value : '',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        const message = data.error || data.message || 'Failed to start analysis';
+        alert(message);
+        submitButton.disabled = false;
+        submitButton.textContent = 'Start analysis';
+        return;
+      }
+
+      submitButton.textContent = 'Analysis running…';
+      if (feedbackEl) {
+        const processed = data.processed_artifacts ?? '—';
+        const total = data.total_artifacts ?? '—';
+        const memo = data.analysis_message || 'Background worker queued analysis.';
+        feedbackEl.textContent = `Processed artifacts: ${processed}/${total}. ${memo}`;
+      }
+      setTimeout(refreshState, 2000);
+    } catch (error) {
+      console.error('Analysis request failed', error);
+      alert('Analysis request failed. Please try again.');
+      submitButton.disabled = false;
+      submitButton.textContent = 'Start analysis';
+      if (feedbackEl) {
+        feedbackEl.textContent = 'Analysis failed to start. Please retry or check the dataset detail page for logs.';
+      }
+    }
+  });
+
+  refreshState();
+})();
+</script>
+{% endblock %}

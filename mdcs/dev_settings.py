@@ -11,6 +11,8 @@ from .settings import *  # noqa
 # Run in debug mode in development
 DEBUG = True
 
+TEMPLATES[0]["OPTIONS"]["debug"] = True  # noqa: F405
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -25,7 +27,10 @@ AUTH_PASSWORD_VALIDATORS = []
 MONGODB_ASYNC_SAVE = False
 # Enable captcha test mode (use PASSED)
 CAPTCHA_TEST_MODE = True
-# Run celery tasks in the main process
+# Run celery tasks in the main process (Celery 5+ expects the task_* names)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+# Backwards compat for older Celery settings modules
 CELERY_ALWAYS_EAGER = True
 
 # Django Allauth dev settings

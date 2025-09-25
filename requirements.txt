@@ -1,2 +1,5 @@
 celery
 Django
+requests>=2.31.0
+pyarrow>=12.0.0
+ijson>=3.2

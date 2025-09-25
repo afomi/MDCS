@@ -132,6 +132,7 @@ INSTALLED_APPS = (
     "core_module_text_area_app",
     # Local apps
     "mdcs_home",
+    "dataset_imports",
 )
 
 MIDDLEWARE = (

@@ -15,7 +15,7 @@ CUSTOM_DATA = "Materials Data"
 CUSTOM_NAME = (
     os.environ["SERVER_NAME"] if "SERVER_NAME" in os.environ else "Curator"
 )
-CUSTOM_TITLE = "Test"
+CUSTOM_TITLE = "CAISI AI TO"
 CUSTOM_SUBTITLE = "Part of the Materials Genome Initiative"
 CURATE_MENU_NAME = "Data Curation"
 WEBSITE_ADMIN_COLOR = "yellow"

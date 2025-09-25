@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf.urls import include
 from django.contrib import admin
 from django.urls import re_path
+from django.views.generic import RedirectView
 from mdcs.core_settings import ADMIN_URLS_PREFIX
 
 from core_main_app.admin import core_admin_site
@@ -28,8 +29,73 @@ urlpatterns = [
     re_path(
         r"^o/", include("oauth2_provider.urls", namespace="oauth2_provider")
     ),
-    re_path(r"^", include("core_main_app.urls")),
     re_path(r"^home/", include("mdcs_home.urls")),
+    re_path(r"^datasets/", include("dataset_imports.urls")),
+    re_path(
+        r"^import/$",
+        RedirectView.as_view(pattern_name="dataset_imports:catalog", permanent=True),
+    ),
+    re_path(
+        r"^import/(?P<dataset_id>[^/]+)/$",
+        RedirectView.as_view(pattern_name="dataset_imports:detail", permanent=True),
+    ),
+    re_path(
+        r"^import/(?P<dataset_id>[^/]+)/status/$",
+        RedirectView.as_view(pattern_name="dataset_imports:status-legacy", permanent=True),
+    ),
+    re_path(
+        r"^import/(?P<dataset_id>[^/]+)/analyze/$",
+        RedirectView.as_view(pattern_name="dataset_imports:analyze-legacy", permanent=True),
+    ),
+    re_path(
+        r"^import/api/(?P<dataset_id>[^/]+)/status/$",
+        RedirectView.as_view(pattern_name="dataset_imports:status", permanent=True),
+    ),
+    re_path(
+        r"^import/api/(?P<dataset_id>[^/]+)/start/$",
+        RedirectView.as_view(pattern_name="dataset_imports:start", permanent=True),
+    ),
+    re_path(
+        r"^import/api/(?P<dataset_id>[^/]+)/reset/$",
+        RedirectView.as_view(pattern_name="dataset_imports:reset", permanent=True),
+    ),
+    re_path(
+        r"^import/api/(?P<dataset_id>[^/]+)/analyze/$",
+        RedirectView.as_view(pattern_name="dataset_imports:analyze", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/$",
+        RedirectView.as_view(pattern_name="dataset_imports:catalog", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/(?P<dataset_id>[^/]+)/$",
+        RedirectView.as_view(pattern_name="dataset_imports:detail", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/(?P<dataset_id>[^/]+)/status/$",
+        RedirectView.as_view(pattern_name="dataset_imports:status-legacy", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/(?P<dataset_id>[^/]+)/analyze/$",
+        RedirectView.as_view(pattern_name="dataset_imports:analyze-legacy", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/api/(?P<dataset_id>[^/]+)/status/$",
+        RedirectView.as_view(pattern_name="dataset_imports:status", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/api/(?P<dataset_id>[^/]+)/start/$",
+        RedirectView.as_view(pattern_name="dataset_imports:start", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/api/(?P<dataset_id>[^/]+)/reset/$",
+        RedirectView.as_view(pattern_name="dataset_imports:reset", permanent=True),
+    ),
+    re_path(
+        r"^ingestion/api/(?P<dataset_id>[^/]+)/analyze/$",
+        RedirectView.as_view(pattern_name="dataset_imports:analyze", permanent=True),
+    ),
+    re_path(r"^", include("core_main_app.urls")),
     re_path(r"^", include("core_website_app.urls")),
     re_path(r"^curate/", include("core_curate_app.urls")),
     re_path(r"^composer/", include("core_composer_app.urls")),

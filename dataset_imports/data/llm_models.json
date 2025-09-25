@@ -1,0 +1,80 @@
+[
+  {
+    "id": "openai_gpt4o",
+    "provider": "OpenAI",
+    "name": "GPT-4o",
+    "deployment_options": [
+      "OpenAI API",
+      "Azure OpenAI"
+    ],
+    "license": "Commercial",
+    "notes": "Flagship multimodal model. Offers enterprise controls, SOC 2 and ISO 27001 compliance paths."
+  },
+  {
+    "id": "anthropic_claude3_opus",
+    "provider": "Anthropic",
+    "name": "Claude 3 Opus",
+    "deployment_options": [
+      "Anthropic API",
+      "AWS Bedrock",
+      "Google Vertex AI"
+    ],
+    "license": "Commercial",
+    "notes": "High-alignment conversational model with strong safety tooling; FedRAMP Moderate in progress via AWS Bedrock."
+  },
+  {
+    "id": "google_gemini_1_5_flash",
+    "provider": "Google",
+    "name": "Gemini 1.5 Flash",
+    "deployment_options": [
+      "Google AI Studio",
+      "Google Vertex AI"
+    ],
+    "license": "Commercial",
+    "notes": "Latency-optimized multimodal model. Vertex AI supports regional data residency controls."
+  },
+  {
+    "id": "meta_llama3_70b",
+    "provider": "Meta",
+    "name": "Llama 3 70B",
+    "deployment_options": [
+      "Self-hosted",
+      "Azure AI",
+      "AWS EC2"
+    ],
+    "license": "Llama 3 Community License",
+    "notes": "Open-weight model suitable for on-prem deployments when agencies require full data custody."
+  },
+  {
+    "id": "ollama_llama3_8b",
+    "provider": "Ollama",
+    "name": "Llama 3 8B (Ollama package)",
+    "deployment_options": [
+      "Ollama Runtime"
+    ],
+    "license": "Llama 3 Community License",
+    "notes": "Developer-friendly local runtime; good for prototyping on secured endpoints without external API calls."
+  },
+  {
+    "id": "ibm_granite_13b_instruct",
+    "provider": "IBM",
+    "name": "Granite 13B Instruct",
+    "deployment_options": [
+      "IBM watsonx.ai",
+      "Self-hosted"
+    ],
+    "license": "Apache 2.0",
+    "notes": "Public-sector ready with FIPS-aligned tooling and transparent training data disclosures."
+  },
+  {
+    "id": "mistral_mistral_large",
+    "provider": "Mistral AI",
+    "name": "Mistral Large",
+    "deployment_options": [
+      "Mistral API",
+      "Azure AI"
+    ],
+    "license": "Commercial",
+    "notes": "EU-based provider offering strong data localization guarantees; aligns with GDPR and emerging EU AI Act guidance."
+  }
+]
