@@ -3,167 +3,385 @@
 {% block app_data %}
 <style>
   .explore-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  @media (min-width: 64rem) {
+    .explore-layout {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+  }
+
+  .dataset-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dataset-panel {
     display: grid;
     gap: 1.5rem;
   }
-  @media (min-width: 992px) {
-    .explore-layout {
-      grid-template-columns: 380px 1fr;
-      align-items: start;
-    }
+
+  .dataset-list li + li {
+    margin-top: 1rem;
   }
-  .explore-wrapper {
-    min-height: calc(100vh - 140px);
+
+  .dataset-card {
+    display: block;
+    border: 1px solid #dfe1e2;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    text-decoration: none;
+    color: inherit;
   }
-  .explore-layout > section {
-    display: flex;
-    flex-direction: column;
+
+  .dataset-card:hover {
+    background-color: #f5f6f7;
   }
-  .dataset-pane-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+
+  .dataset-card--active {
+    border-color: #1a4480;
+    background-color: #edf5ff;
   }
-  .dataset-pane-card .card-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
+
+  .analysis-summary-table th {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1f2937;
+    border-top: none;
   }
-  .dataset-list {
-    flex: 1 1 auto;
-    overflow-y: auto;
+
+  .analysis-summary-table td {
+    font-size: 0.85rem;
+    vertical-align: middle;
   }
-  .dataset-list .list-group-item.active {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
+
+  .analysis-summary-hint {
+    font-size: 0.8rem;
+    color: #1f2937;
   }
-  .dataset-list .list-group-item.active .text-muted {
-    color: rgba(255, 255, 255, 0.65) !important;
+
+  .analysis-summary-details {
+    font-size: 0.78rem;
+    color: #1f2937;
   }
-  .analysis-card .progress {
-    height: 6px;
+
+  .status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status-tag--neutral {
+    background-color: #e2e7eb;
+    color: #1f2937;
+  }
+
+  .status-tag--info {
+    background-color: #c9f0ff;
+    color: #0f172a;
+  }
+
+  .status-tag--warning {
+    background-color: #ffe1ba;
+    color: #3f2800;
+  }
+
+  .status-tag--success {
+    background-color: #cdeee1;
+    color: #0e3828;
+  }
+
+  .status-tag--error {
+    background-color: #fbd0d0;
+    color: #5a0d0d;
+  }
+
+  .status-tag--muted {
+    background-color: #f0f0f0;
+    color: #1f2937;
+    border: 1px solid #dfe1e2;
+  }
+
+  .text-bold {
+    font-weight: 600;
+  }
+
+  .font-mono {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  .text-base {
+    font-size: 0.875rem;
+  }
+
+  .text-light {
+    color: #1f2937;
+  }
+
+  .hash-sample {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.7rem;
+    color: #1f2937;
   }
 </style>
 
-<div class="explore-wrapper explore-layout">
-  <section>
-    <h1 class="h4 mb-3">1. Choose a dataset</h1>
-    <div class="card dataset-pane-card">
-      <div class="card-body">
-        <p class="small text-muted mb-3">Select a dataset to inspect its download status and enable analysis controls.</p>
-        <ul class="list-group dataset-list">
-          {% for entry in datasets %}
-            {% with dataset=entry.dataset state=entry.state %}
-              <li class="list-group-item position-relative {% if entry.selected %}active{% endif %}">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                  <div class="fw-semibold">{{ dataset.name }}</div>
-                  <span class="badge {{ state.status_badge_class|default:'bg-secondary' }}">{{ state.status_label }}</span>
-                </div>
-                <div class="d-flex justify-content-between small text-muted mt-2">
-                  <span>{{ state.processed_artifacts }}/{{ state.total_artifacts }} artifacts processed</span>
-                  <span>{{ state.downloaded_bytes|filesizeformat }} downloaded</span>
-                </div>
-                <a class="stretched-link" href="{% url 'dataset_imports:explore' %}?dataset={{ dataset.id }}" aria-label="Select {{ dataset.name }}"></a>
+<section
+  class=""
+>
+  <div class="grid-container-widescreen">
+    <div class="explore-layout">
+      <aside
+        class="grid-col-12 desktop:grid-col-5"
+      >
+        <h1
+          class="usa-heading"
+        >
+          1. Choose a dataset
+        </h1>
+        <div
+          class="dataset-panel padding-3 bg-base-lightest border border-base-lighter radius-md"
+        >
+          <p
+            class="text-base margin-bottom-2"
+          >
+            Select a dataset to extract topics.
+          </p>
+          <ul
+            class="dataset-list"
+          >
+            {% for entry in datasets %}
+              {% with dataset=entry.dataset state=entry.state %}
+                <li>
+                  <a
+                    class="dataset-card {% if entry.selected %}dataset-card--active{% endif %}"
+                    href="{% url 'dataset_imports:explore' %}?dataset={{ dataset.id }}"
+                    {% if entry.selected %}aria-current="page"{% endif %}
+                  >
+                    <div class="display-flex flex-justify flex-align-start">
+                      <div class="text-bold">
+                        {{ dataset.name }}
+                      </div>
+                      <span class="usa-tag status-tag {{ state.status_badge_class|default:'status-tag--neutral' }}">
+                        {{ state.status_label }}
+                      </span>
+                    </div>
+                    <div class="display-flex flex-justify text-base margin-top-1">
+                      <span>
+                        {{ state.processed_artifacts }}/{{ state.total_artifacts }} artifacts processed
+                      </span>
+                      <span>
+                        {{ state.downloaded_bytes|filesizeformat }} downloaded
+                      </span>
+                    </div>
+                  </a>
+                </li>
+              {% endwith %}
+            {% empty %}
+              <li
+                class="text-base"
+              >
+                No datasets configured.
               </li>
-            {% endwith %}
-          {% empty %}
-            <li class="list-group-item text-muted text-center">No datasets configured.</li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
-  </section>
+            {% endfor %}
+          </ul>
+        </div>
+      </aside>
 
-  <section>
-    <h2 class="h4 mb-3">2. Choose analysis approach</h2>
-    {% if not active_entry %}
-      <div class="alert alert-secondary" role="alert">
-        Select a dataset on the left to configure its analysis.
-      </div>
-    {% else %}
-      {% with dataset=active_entry.dataset state=active_entry.state %}
-      <div class="card analysis-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h3 class="h5 mb-1">{{ dataset.name }}</h3>
+      <div
+        class="grid-col-12 desktop:grid-col-7"
+      >
+        <h2 class="usa-heading">2. Choose analysis approach</h2>
+        {% if not active_entry %}
+          <div class="usa-alert usa-alert--info" role="alert">
+            <div class="usa-alert__body">
+              <h4 class="usa-alert__heading">Select a dataset</h4>
+              <p class="usa-alert__text">Choose a dataset on the left to configure its analysis controls.</p>
             </div>
-            <a class="btn btn-link btn-sm" href="{{ active_entry.detail_url }}">View Dataset</a>
           </div>
-
-          <div class="mb-3">
-            <div class="d-flex justify-content-between small text-muted mb-1">
-              <span>Ingestion progress</span>
-              <span>{{ state.processed_artifacts }}/{{ state.total_artifacts }} artifacts processed</span>
-            </div>
-            <div class="progress">
-              <div class="progress-bar" role="progressbar" style="width: {{ state.download_progress|default:0 }}%" aria-valuenow="{{ state.download_progress|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <div class="small text-muted mt-1">{{ state.downloaded_bytes|filesizeformat }} downloaded</div>
-          </div>
-
-          <form id="analysis-form" data-status-url="{{ active_entry.status_url }}" data-analyze-url="{{ active_entry.analyze_url }}" data-supported="{{ dataset.supported|yesno:'true,false' }}">
-            {% csrf_token %}
-            <fieldset class="mb-3" {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}>
-              <legend class="h6">Analysis approach</legend>
-              {% for value, label in analysis_modes %}
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" name="analysis_mode" id="analysis-{{ value }}" value="{{ value }}"
-                    {% if state.analysis_mode %}
-                      {% if state.analysis_mode == value %}checked{% endif %}
-                    {% elif forloop.first %}
-                      checked
-                    {% endif %}>
-                  <label class="form-check-label" for="analysis-{{ value }}">{{ label }}</label>
+        {% else %}
+          {% with dataset=active_entry.dataset state=active_entry.state %}
+          <div class="usa-card analysis-card">
+            <div class="usa-card__container">
+              <header class="usa-card__header display-flex flex-justify">
+                <div>
+                  <h3 class="usa-card__heading">{{ dataset.name }}</h3>
+                  {% if dataset.description %}
+                    <p class="text-base margin-top-1">{{ dataset.description }}</p>
+                  {% endif %}
                 </div>
-              {% endfor %}
-            </fieldset>
+                <a class="usa-button usa-button--unstyled" href="{{ active_entry.detail_url }}">View dataset</a>
+              </header>
+              <div class="usa-card__body">
+                <div class="margin-bottom-3">
+                  <div class="display-flex flex-justify text-base margin-bottom-05">
+                    <span>Ingestion progress</span>
+                    <span>{{ state.processed_artifacts }}/{{ state.total_artifacts }} artifacts processed</span>
+                  </div>
+                  <div class="usa-progress">
+                    <div class="usa-progress__bar" role="progressbar" style="width: {{ state.download_progress|default:0 }}%" aria-valuenow="{{ state.download_progress|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                  <div class="text-base margin-top-1">{{ state.downloaded_bytes|filesizeformat }} downloaded</div>
+                </div>
 
-            {% if not user_is_staff %}
-              <p class="small text-muted mt-2 mb-0">Staff access is required to run analysis.</p>
-            {% elif not dataset.supported %}
-              <p class="small text-muted mt-2 mb-0">Pipeline integration pending for this dataset.</p>
-            {% elif not state.downloaded_bytes %}
-              <p class="small text-muted mt-2 mb-0">Download at least one artifact before running analysis.</p>
-            {% endif %}
-
-            <div class="d-flex gap-2 mt-3">
-              <button type="submit" class="btn btn-primary" {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}>Start analysis</button>
-              <a href="{{ active_entry.detail_url }}" class="btn btn-outline-secondary">View Dataset</a>
-            </div>
-            <p class="small text-muted mt-2 mb-0" data-role="analysis-feedback"></p>
-          </form>
-          <div id="explore-summary" class="mt-4">
-            {% if state.analysis_summary %}
-              {% if state.analysis_summary.status == 'ok' %}
-                <div class="alert alert-light border">
-                  <h4 class="h6 mb-2">Topical Overview</h4>
-                  <p class="small text-muted mb-3">Sampled {{ state.analysis_summary.sampled_messages }} messages. Quick-glance themes below.</p>
-                  <div class="d-flex flex-column gap-2">
-                    {% for topic in state.analysis_summary.topics %}
-                      <div class="border rounded p-2">
-                        <div class="fw-semibold small text-uppercase text-muted">{{ topic.label }}</div>
-                        <div class="small">Keywords: <span class="font-monospace">{{ topic.keywords|join:', ' }}</span></div>
-                        {% if topic.sample %}
-                          <div class="small text-muted mt-1">{{ topic.sample|truncatechars:160 }}</div>
-                        {% endif %}
+                <form
+                  id="analysis-form"
+                  data-status-url="{{ active_entry.status_url }}"
+                  data-analyze-url="{{ active_entry.analyze_url }}"
+                  data-supported="{{ dataset.supported|yesno:'true,false' }}"
+                >
+                  {% csrf_token %}
+                  <fieldset
+                    class="margin-bottom-3"
+                    {% if not dataset.supported or not user_is_staff or not state.normalized_artifact_count %}disabled{% endif %}
+                  >
+                    <legend
+                      class="usa-label margin-bottom-105"
+                    >
+                      Analysis approach
+                    </legend>
+                    {% for value, label in analysis_modes %}
+                      <div
+                        class="usa-radio"
+                      >
+                        <input
+                          class="usa-radio__input"
+                          type="radio"
+                          name="analysis_mode"
+                          id="analysis-{{ value }}"
+                          value="{{ value }}"
+                          {% if state.analysis_mode %}
+                            {% if state.analysis_mode == value %}checked{% endif %}
+                          {% elif forloop.first %}
+                            checked
+                          {% endif %}
+                        />
+                        <label
+                          class="usa-radio__label"
+                          for="analysis-{{ value }}"
+                        >
+                          {{ label }}
+                        </label>
                       </div>
                     {% endfor %}
+                  </fieldset>
+
+                  <div
+                    class="margin-bottom-3"
+                    data-role="cluster-count-field"
+                    {% if state.analysis_mode != 'topic-clusters' %}hidden{% endif %}
+                  >
+                    <label
+                      class="usa-label"
+                      for="analysis-cluster-count-explore"
+                    >
+                      Cluster count
+                    </label>
+                    <div
+                      class="usa-hint"
+                      id="analysis-cluster-count-explore-hint"
+                    >
+                      Choose how many conversation clusters to generate (2–50).
+                    </div>
+                    <input
+                      class="usa-input"
+                      id="analysis-cluster-count-explore"
+                      name="cluster_count"
+                      type="number"
+                      min="2"
+                      max="50"
+                      value="{{ state.analysis_cluster_count|default:default_cluster_count }}"
+                      data-default="{{ state.analysis_cluster_count|default:default_cluster_count }}"
+                      {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}
+                    />
                   </div>
-                </div>
-              {% else %}
-                <div class="alert alert-light border small text-muted">{{ state.analysis_summary.message }}</div>
-              {% endif %}
-            {% endif %}
+
+                  <div
+                    class="margin-bottom-3"
+                    data-role="doc-limit-field"
+                    {% if state.analysis_mode != 'topic-clusters' %}hidden{% endif %}
+                  >
+                    <label
+                      class="usa-label"
+                      for="analysis-doc-limit-explore"
+                    >
+                      Documents for clustering
+                    </label>
+                    <div
+                      class="usa-hint"
+                      id="analysis-doc-limit-explore-hint"
+                    >
+                      Max conversations to include (100–20,000). Higher limits increase memory/time.
+                    </div>
+                    <input
+                      class="usa-input"
+                      id="analysis-doc-limit-explore"
+                      name="document_limit"
+                      type="number"
+                      min="100"
+                      max="20000"
+                      value="{{ state.analysis_cluster_doc_limit|default:1500 }}"
+                      data-default="{{ state.analysis_cluster_doc_limit|default:1500 }}"
+                      {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}
+                    />
+                  </div>
+
+                  {% if not user_is_staff %}
+                    <p class="text-base margin-bottom-2">Staff access is required to run analysis.</p>
+                  {% elif not dataset.supported %}
+                    <p class="text-base margin-bottom-2">Pipeline integration pending for this dataset.</p>
+                  {% elif not state.downloaded_bytes %}
+                    <p class="text-base margin-bottom-2">Download at least one artifact before running analysis.</p>
+                  {% elif not state.can_analyze %}
+                    <p class="text-base margin-bottom-2">Normalize the downloaded artifacts before running analysis.</p>
+                  {% endif %}
+
+                  <div
+                    class="display-flex flex-wrap gap-2 margin-bottom-2"
+                  >
+                    <button
+                      type="submit"
+                      class="usa-button"
+                      {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}
+                    >
+                      Start analysis
+                    </button>
+                    <button
+                      type="button"
+                      class="usa-button usa-button--secondary"
+                      id="quick-demo-btn"
+                      {% if not state.downloaded_bytes or not dataset.supported or not user_is_staff %}disabled{% endif %}
+                    >
+                      Quick demo (topic clusters)
+                    </button>
+                  </div>
+                  <p
+                    class="text-base margin-bottom-0"
+                    data-role="analysis-feedback"
+                  ></p>
+                </form>
+
+                <div id="explore-summary" class="margin-top-4"></div>
+                <div id="explore-jobs" class="margin-top-3"></div>
+              </div>
+            </div>
           </div>
-        </div>
+          {% endwith %}
+        {% endif %}
       </div>
-      {% endwith %}
-    {% endif %}
-  </section>
-</div>
+    </div>
+  </div>
+</section>
 
 <script>
 function exploreEscapeHtml(value) {
@@ -175,35 +393,296 @@ function exploreEscapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function renderExploreSummary(summary) {
+function exploreFormatBytes(bytes) {
+  if (!bytes || bytes <= 0) {
+    return '0 bytes';
+  }
+  const thresh = 1024;
+  const units = ['bytes', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let index = 0;
+  while (value >= thresh && index < units.length - 1) {
+    value /= thresh;
+    index += 1;
+  }
+  return `${value.toFixed(1)} ${units[index]}`;
+}
+
+function exploreAbbreviateHash(value, length = 7) {
+  if (value === null || typeof value === 'undefined') {
+    return '';
+  }
+  const normalized = String(value).trim();
+  if (!normalized) {
+    return '';
+  }
+  const prefix = normalized.slice(0, length);
+  return normalized.length > length ? `${prefix}…` : prefix;
+}
+
+function exploreFormatDatetime(value) {
+  if (!value) {
+    return '—';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return exploreEscapeHtml(String(value));
+  }
+  return exploreEscapeHtml(date.toLocaleString());
+}
+
+function renderExploreJobs(jobs) {
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return '<p class="text-base margin-bottom-0">No analysis jobs recorded yet.</p>';
+  }
+
+  const rows = jobs.map((job) => {
+    const status = exploreEscapeHtml(job.status_label || job.status || 'Unknown');
+    const requestedMode = exploreEscapeHtml(job.requested_mode || '—');
+    const requestedClusters = Number.isFinite(Number(job.requested_cluster_count))
+      ? exploreEscapeHtml(String(job.requested_cluster_count))
+      : '—';
+    const clusterCount = Number.isFinite(Number(job.cluster_count))
+      ? exploreEscapeHtml(String(job.cluster_count))
+      : '—';
+    const documentCount = Number.isFinite(Number(job.document_count))
+      ? exploreEscapeHtml(String(job.document_count))
+      : '—';
+    const algorithm = exploreEscapeHtml(job.algorithm || '—');
+    const started = exploreFormatDatetime(job.started_at);
+    const finished = exploreFormatDatetime(job.finished_at);
+    const error = job.error ? `<div class="analysis-summary-details text-danger">${exploreEscapeHtml(job.error)}</div>` : '';
+
+    const extraNotes = [];
+    if (clusterCount !== '—') {
+      extraNotes.push(`Clusters: ${clusterCount}`);
+    }
+    if (documentCount !== '—') {
+      extraNotes.push(`Documents: ${documentCount}`);
+    }
+    const detailSummary = extraNotes.length
+      ? `<div class="analysis-summary-details">${extraNotes.join(' · ')}</div>`
+      : '';
+
+    return `
+      <tr>
+        <td>${status}</td>
+        <td>
+          <div class="text-bold">${requestedMode}</div>
+          <div class="analysis-summary-details">Clusters: ${requestedClusters}</div>
+        </td>
+        <td>
+          <div>Started: ${started}</div>
+          <div>Finished: ${finished}</div>
+        </td>
+        <td>
+          <div>Algorithm: ${algorithm}</div>
+          ${detailSummary}
+          ${error}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="usa-card explore-summary-card">
+      <div class="usa-card__container">
+        <div class="usa-card__header">
+          <h3 class="usa-card__heading margin-bottom-0">Analysis jobs</h3>
+        </div>
+        <div class="usa-card__body">
+          <div class="usa-table-container--scrollable">
+            <table class="usa-table usa-table--compact analysis-summary-table">
+              <thead>
+                <tr>
+                  <th scope="col">Status</th>
+                  <th scope="col">Requested</th>
+                  <th scope="col">Timing</th>
+                  <th scope="col">Details</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderExploreSummary(summary, state) {
   if (!summary) {
     return '';
   }
+
+  const parts = ['<div class="usa-card explore-summary-card"><div class="usa-card__container"><div class="usa-card__body">'];
+
   if (summary.status && summary.status !== 'ok') {
     const message = summary.message ? exploreEscapeHtml(summary.message) : 'Analysis summary unavailable.';
-    return `<div class="alert alert-light border small text-muted">${message}</div>`;
+    parts.push(`<p class="analysis-summary-hint margin-bottom-0">${message}</p>`);
+    parts.push('</div></div></div>');
+    return parts.join('');
   }
 
-  const sampled = summary.sampled_messages || 0;
-  const topics = Array.isArray(summary.topics) ? summary.topics : [];
-  const topicMarkup = topics.map((topic) => {
-    const title = exploreEscapeHtml(topic.label || 'Theme');
-    const keywords = Array.isArray(topic.keywords) ? topic.keywords.map(exploreEscapeHtml).join(', ') : '';
-    const rawSample = topic.sample ? String(topic.sample) : '';
-    const truncated = rawSample.length > 160 ? `${rawSample.slice(0, 160)}…` : rawSample;
-    const snippet = rawSample ? `<div class="small text-muted mt-1">${exploreEscapeHtml(truncated)}</div>` : '';
-    return `<div class="border rounded p-2">
-        <div class="fw-semibold small text-uppercase text-muted">${title}</div>
-        <div class="small">Keywords: <span class="font-monospace">${keywords}</span></div>
-        ${snippet}
-      </div>`;
-  }).join('');
+  const totalRows = Number.isFinite(Number(summary.total_row_count)) ? Number(summary.total_row_count) : null;
+  const totalWords = Number.isFinite(Number(summary.total_word_count)) ? Number(summary.total_word_count) : null;
 
-  return `<div class="alert alert-light border">
-      <h4 class="h6 mb-2">Topical Overview</h4>
-      <p class="small text-muted mb-3">Sampled ${sampled} messages. Quick-glance themes below.</p>
-      <div class="d-flex flex-column gap-2">${topicMarkup}</div>
-    </div>`;
+  if (totalRows !== null || totalWords !== null) {
+    const segments = [];
+    if (totalRows !== null) {
+      segments.push(`Total rows: ${exploreEscapeHtml(String(totalRows))}`);
+    }
+    if (totalWords !== null) {
+      segments.push(`Total words: ${exploreEscapeHtml(String(totalWords))}`);
+    }
+    parts.push(`<p class="analysis-summary-hint margin-bottom-2">${segments.join(' · ')}</p>`);
+  } else {
+    parts.push('<p class="analysis-summary-hint margin-bottom-2">Analysis complete. No aggregate metrics reported.</p>');
+  }
+
+  const artifacts = Array.isArray(summary.artifacts) ? summary.artifacts : [];
+  const artifactCount = typeof summary.artifact_count === 'number' ? summary.artifact_count : artifacts.length;
+  const totalBytes = typeof summary.total_downloaded_bytes === 'number' ? summary.total_downloaded_bytes : null;
+
+  if (artifactCount) {
+    const totalLabel = totalBytes ? ` totaling ${exploreEscapeHtml(exploreFormatBytes(totalBytes))}` : '';
+    parts.push(`<p class="analysis-summary-hint margin-bottom-3">Inspected ${artifactCount} artifact${artifactCount === 1 ? '' : 's'}${totalLabel}.</p>`);
+  } else if (!artifacts.length) {
+    parts.push('<p class="analysis-summary-hint margin-bottom-0">No downloaded artifacts were available for inspection.</p>');
+  }
+
+  if (artifacts.length) {
+    const rows = artifacts.map((artifact) => {
+      const name = exploreEscapeHtml(artifact.filename || '(unknown)');
+      const statusRaw = artifact.status ? String(artifact.status) : 'unknown';
+      const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
+
+      const downloadedBytes = Number.isFinite(Number(artifact.downloaded_bytes)) ? Number(artifact.downloaded_bytes) : null;
+      const sizeBytes = Number.isFinite(Number(artifact.size_bytes)) ? Number(artifact.size_bytes) : null;
+      let downloadCell = downloadedBytes !== null ? exploreEscapeHtml(exploreFormatBytes(downloadedBytes)) : '—';
+      if (downloadedBytes !== null && sizeBytes !== null) {
+        downloadCell += `<div class="analysis-summary-details">of ${exploreEscapeHtml(exploreFormatBytes(sizeBytes))}</div>`;
+      }
+
+      const rowCount = Number.isFinite(Number(artifact.row_count)) ? Number(artifact.row_count) : null;
+      const wordCount = Number.isFinite(Number(artifact.word_count)) ? Number(artifact.word_count) : null;
+      const hasSampleBytes = artifact.sample_bytes !== undefined && artifact.sample_bytes !== null;
+      const sampleValue = hasSampleBytes ? Number(artifact.sample_bytes) : null;
+      const sampleCell = hasSampleBytes && Number.isFinite(sampleValue)
+        ? exploreEscapeHtml(exploreFormatBytes(sampleValue))
+        : '—';
+
+      let notes = '';
+      if (artifact.sample_checksum) {
+        const checksum = String(artifact.sample_checksum);
+        const short = exploreAbbreviateHash(checksum);
+        const shortEscaped = exploreEscapeHtml(short || checksum);
+        const fullEscaped = exploreEscapeHtml(checksum);
+        notes += `<div class="hash-sample" title="${fullEscaped}">sha256 ${shortEscaped}</div>`;
+      }
+      if (artifact.read_error) {
+        notes += `<div class="text-danger text-base">Read error: ${exploreEscapeHtml(artifact.read_error)}</div>`;
+      }
+      if (!notes) {
+        notes = '—';
+      }
+
+      return `
+        <tr>
+          <td>
+            <div class="text-bold">${name}</div>
+            <div class="analysis-summary-details">${exploreEscapeHtml(status)}</div>
+          </td>
+          <td>${downloadCell}</td>
+          <td>${rowCount !== null ? exploreEscapeHtml(String(rowCount)) : '—'}</td>
+          <td>${wordCount !== null ? exploreEscapeHtml(String(wordCount)) : '—'}</td>
+          <td>${sampleCell}</td>
+          <td>${notes}</td>
+        </tr>
+      `;
+    }).join('');
+
+    parts.push('<div class="usa-table-container--scrollable">');
+    parts.push('<table class="usa-table usa-table--compact analysis-summary-table"><thead><tr><th scope="col">Artifact</th><th scope="col">Downloaded</th><th scope="col">Rows</th><th scope="col">Words</th><th scope="col">Sampled</th><th scope="col">Notes</th></tr></thead><tbody>');
+    parts.push(rows);
+    parts.push('</tbody></table></div>');
+  }
+
+  const clusterOverview = summary.cluster_overview || null;
+  const clusters = Array.isArray(summary.clusters) ? summary.clusters : [];
+  const requestedRaw = summary.requested_cluster_count ?? (clusterOverview ? clusterOverview.requested_count : undefined);
+  const requestedClusterCount = (requestedRaw === undefined || requestedRaw === null)
+    ? Number.NaN
+    : Number(requestedRaw);
+  const totalArtifacts = Number(state?.total_artifacts ?? 0);
+  const normalizedCount = Number(state?.normalized_artifact_count ?? state?.normalized_artifacts ?? 0);
+  const downloadPct = Number(state?.download_progress ?? state?.download_progress_pct ?? 0);
+  const shouldShowClusters = clusterOverview || clusters.length || downloadPct >= 100 || totalArtifacts === 0;
+  if (shouldShowClusters) {
+    parts.push('<h3 class="usa-heading margin-top-4 margin-bottom-2">Topic clusters</h3>');
+
+    if (clusterOverview) {
+      const docCount = Number(clusterOverview.document_count || clusters.reduce((acc, cluster) => acc + (cluster.size || 0), 0));
+      const clusterCount = Number(clusterOverview.cluster_count || clusters.length);
+      const algorithmName = clusterOverview.algorithm || 'minibatch-kmeans';
+      const segments = [];
+      if (Number.isFinite(requestedClusterCount) && requestedClusterCount > 0) {
+        segments.push(`Requested ${requestedClusterCount} cluster${requestedClusterCount === 1 ? '' : 's'}.`);
+      }
+      segments.push(`Generated ${clusterCount} cluster${clusterCount === 1 ? '' : 's'} from ${docCount} conversation${docCount === 1 ? '' : 's'} using ${exploreEscapeHtml(algorithmName)}.`);
+      parts.push(`<p class="analysis-summary-hint margin-bottom-2">${segments.join(' ')}</p>`);
+
+      if (!clusters.length || clusterCount === 0) {
+        const status = clusterOverview.status || '';
+      let fallback = 'No clusters were generated for the current analysis run.';
+      if (status === 'insufficient-documents') {
+        fallback = 'Not enough conversations were available to form clusters. Include more artifacts and rerun analysis.';
+      } else if (status === 'no-conversations') {
+        fallback = 'Topic clustering will be available once normalization finishes for this dataset.';
+      } else if (status === 'no-clusters') {
+        fallback = 'K-means finished without forming groups. Adjust the cluster count or ensure conversations contain varied topics.';
+      }
+      const note = clusterOverview.note || fallback;
+      parts.push(`<p class="analysis-summary-details margin-bottom-2">${exploreEscapeHtml(note)}</p>`);
+    }
+  }
+
+    if (clusters.length) {
+    const clusterRows = clusters.map((cluster, index) => {
+      const label = `Cluster ${index + 1}`;
+      const size = Number(cluster.size || 0);
+        const topTerms = Array.isArray(cluster.top_terms) ? cluster.top_terms.slice(0, 8) : [];
+        const topTermsText = topTerms.length ? topTerms.map(exploreEscapeHtml).join(', ') : '—';
+        const samples = Array.isArray(cluster.sample_conversations) ? cluster.sample_conversations : [];
+      const sampleMarkup = samples.map((sample) => {
+        const title = exploreEscapeHtml(sample.title || sample.source_id || 'Conversation');
+        const excerpt = sample.excerpt ? `<div class="analysis-summary-details">${exploreEscapeHtml(sample.excerpt)}</div>` : '';
+        return `<div class="margin-bottom-2"><strong>${title}</strong>${excerpt}</div>`;
+      }).join('') || '<div class="analysis-summary-details">No samples available.</div>';
+
+      return `
+        <tr>
+          <td>
+            <div class="text-bold">${exploreEscapeHtml(label)}</div>
+            <div class="analysis-summary-details">Top terms: ${topTermsText}</div>
+          </td>
+          <td>${size}</td>
+          <td>${sampleMarkup}</td>
+        </tr>
+      `;
+      }).join('');
+
+    parts.push('<div class="usa-table-container--scrollable">');
+    parts.push('<table class="usa-table usa-table--compact analysis-summary-table"><thead><tr><th scope="col">Cluster</th><th scope="col">Conversations</th><th scope="col">Samples</th></tr></thead><tbody>');
+    parts.push(clusterRows);
+    parts.push('</tbody></table></div>');
+  } else if (totalArtifacts > 0 && normalizedCount === 0) {
+    parts.push('<p class="analysis-summary-details margin-bottom-2">Normalize artifacts to generate topic clusters once analysis runs.</p>');
+  }
+  }
+
+  parts.push('</div></div></div>');
+  return parts.join('');
 }
 
 (function() {
@@ -216,9 +695,23 @@ function renderExploreSummary(summary) {
   const analyzeUrl = form.dataset.analyzeUrl;
   const supported = form.dataset.supported === 'true';
   const submitButton = form.querySelector('button[type="submit"]');
+  const analysisFieldset = form.querySelector('fieldset');
+  const quickDemoBtn = document.getElementById('quick-demo-btn');
   const feedbackEl = form.querySelector('[data-role="analysis-feedback"]');
   const summaryContainer = document.getElementById('explore-summary');
+  const jobsContainer = document.getElementById('explore-jobs');
   const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+  const clusterCountInput = form.querySelector('input[name="cluster_count"]');
+  const clusterCountField = form.querySelector('[data-role="cluster-count-field"]');
+  const docLimitInput = form.querySelector('input[name="document_limit"]');
+  const docLimitField = form.querySelector('[data-role="doc-limit-field"]');
+
+  function syncClusterVisibility(selectedModeValue) {
+    const selected = selectedModeValue
+      || (form.querySelector('input[name="analysis_mode"]:checked')?.value ?? null);
+    if (clusterCountField) clusterCountField.hidden = selected !== 'topic-clusters';
+    if (docLimitField) docLimitField.hidden = selected !== 'topic-clusters';
+  }
 
   async function refreshState() {
     if (!statusUrl) {
@@ -231,15 +724,50 @@ function renderExploreSummary(summary) {
       }
       const state = await response.json();
       if (submitButton) {
-        submitButton.disabled = !supported || !state.downloaded_bytes;
+        const hasCanAnalyze = Object.prototype.hasOwnProperty.call(state, 'can_analyze');
+        const ready = hasCanAnalyze ? Boolean(state.can_analyze) : Boolean(state.downloaded_bytes);
+        submitButton.disabled = !supported || !ready;
+        const radiosReady = Boolean(state.normalized_artifact_count || 0) && supported;
+        if (analysisFieldset) analysisFieldset.disabled = !radiosReady;
+        if (quickDemoBtn) {
+          quickDemoBtn.disabled = !supported || !ready;
+        }
       }
       if (summaryContainer) {
-        summaryContainer.innerHTML = renderExploreSummary(state.analysis_summary || null);
+        const markup = renderExploreSummary(state.analysis_summary || null, state);
+        summaryContainer.innerHTML = markup || '<p class="text-base margin-bottom-0">Run analysis to generate a summary of processed artifacts.</p>';
+      }
+      if (jobsContainer) {
+        const jobsMarkup = renderExploreJobs(state.analysis_jobs || []);
+        jobsContainer.innerHTML = jobsMarkup;
+      }
+      if (clusterCountField && Object.prototype.hasOwnProperty.call(state, 'analysis_mode')) {
+        syncClusterVisibility(state.analysis_mode);
+      }
+      if (clusterCountInput && Object.prototype.hasOwnProperty.call(state, 'analysis_cluster_count')) {
+        const fallbackValue = Number(clusterCountInput.dataset.default || clusterCountInput.value || 8);
+        const parsedCluster = Number(state.analysis_cluster_count);
+        const nextValue = Number.isFinite(parsedCluster) && parsedCluster > 0 ? parsedCluster : fallbackValue;
+        clusterCountInput.value = nextValue;
+        clusterCountInput.dataset.default = String(nextValue);
+      }
+      if (docLimitInput && Object.prototype.hasOwnProperty.call(state, 'analysis_cluster_doc_limit')) {
+        const fallbackValue = Number(docLimitInput.dataset.default || docLimitInput.value || 1500);
+        const parsed = Number(state.analysis_cluster_doc_limit);
+        const nextValue = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackValue;
+        docLimitInput.value = nextValue;
+        docLimitInput.dataset.default = String(nextValue);
       }
     } catch (error) {
       console.warn('Failed to refresh status', error);
     }
   }
+
+  form.addEventListener('change', (event) => {
+    if (event.target && event.target.matches('input[name="analysis_mode"]')) {
+      syncClusterVisibility(event.target.value);
+    }
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -251,7 +779,26 @@ function renderExploreSummary(summary) {
     const payload = {
       analysis_mode: selectedMode ? selectedMode.value : null,
     };
-
+    syncClusterVisibility(selectedMode ? selectedMode.value : null);
+    if (clusterCountInput) {
+      const parsedCluster = Number(clusterCountInput.value);
+      if (Number.isFinite(parsedCluster) && parsedCluster > 0) {
+        payload.cluster_count = parsedCluster;
+      }
+    }
+    if (docLimitInput) {
+      const parsedDocLimit = Number(docLimitInput.value);
+      if (Number.isFinite(parsedDocLimit) && parsedDocLimit > 0) {
+        payload.document_limit = parsedDocLimit;
+      }
+    }
+    if (docLimitInput) {
+      const parsedDocLimit = Number(docLimitInput.value);
+      if (Number.isFinite(parsedDocLimit) && parsedDocLimit > 0) {
+        payload.document_limit = parsedDocLimit;
+      }
+    }
+    
     submitButton.disabled = true;
     submitButton.textContent = 'Starting…';
     if (feedbackEl) {
@@ -295,8 +842,34 @@ function renderExploreSummary(summary) {
       }
     }
   });
-
+  if (quickDemoBtn) {
+    quickDemoBtn.addEventListener('click', () => {
+      const topicRadio = form.querySelector('input[name="analysis_mode"][value="topic-clusters"]');
+      if (topicRadio) {
+        topicRadio.checked = true;
+      }
+      if (clusterCountInput) {
+        clusterCountInput.value = String(10);
+      }
+      if (docLimitInput) {
+        docLimitInput.value = String(2000);
+      }
+      syncClusterVisibility('topic-clusters');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    });
+  }
   refreshState();
+  syncClusterVisibility();
+
+  // Auto-refresh state so controls (e.g., Topic clusters radios) enable
+  // as soon as normalization finishes, without manual navigation.
+  let explorePollTimer = setInterval(refreshState, 2000);
+  window.addEventListener('beforeunload', () => {
+    if (explorePollTimer) {
+      clearInterval(explorePollTimer);
+      explorePollTimer = null;
+    }
+  });
 })();
 </script>
 {% endblock %}

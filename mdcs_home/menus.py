@@ -138,3 +138,21 @@ Menu.add_item(
     "help",
     MenuItem("Help", reverse("core_website_app_help"), icon="question-circle"),
 )
+
+
+def _ensure_services_after_processes() -> None:
+    """Ensure any "Services" menu entry follows "Processes" in the same menu."""
+
+    for _, items in Menu.items.items():
+        titles = [item.title for item in items]
+        if "Services" in titles and "Processes" in titles:
+            services_index = titles.index("Services")
+            processes_index = titles.index("Processes")
+            if services_index < processes_index:
+                service_item = items.pop(services_index)
+                # Recompute location of "Processes" after removal.
+                processes_index = [item.title for item in items].index("Processes")
+                items.insert(processes_index + 1, service_item)
+
+
+_ensure_services_after_processes()

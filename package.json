@@ -1,0 +1,12 @@
+{
+  "name": "mdcs-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend assets tooling for MDCS",
+  "scripts": {
+    "build:uswds": "node scripts/copy-uswds.js"
+  },
+  "dependencies": {
+    "@uswds/uswds": "^3.13.0"
+  }
+}

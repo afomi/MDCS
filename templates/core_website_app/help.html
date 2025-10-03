@@ -1,0 +1,337 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html
+  lang="en"
+>
+  <head>
+    <meta
+      charset="utf-8"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>
+      {% translate "Help Center" %} · MDCS
+    </title>
+    <link
+      rel="stylesheet"
+      href="{% static 'vendor/uswds/css/uswds.min.css' %}"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'css/uswds-overrides.css' %}"
+    />
+    <script
+      src="{% static 'vendor/uswds/js/uswds-init.min.js' %}"
+      defer
+    ></script>
+    <script
+      src="{% static 'vendor/uswds/js/uswds.min.js' %}"
+      defer
+    ></script>
+  </head>
+  <body>
+    <main
+      id="main-content"
+      class="usa-section usa-section--light help-page"
+    >
+      <div
+        class="grid-container"
+      >
+        <div
+          class="grid-row grid-gap-lg margin-bottom-4"
+        >
+          <div
+            class="grid-col-12 desktop:grid-col-8"
+          >
+            <h1
+              class="usa-heading margin-bottom-1"
+            >
+              {% translate "Help Center" %}
+            </h1>
+            <p
+              class="usa-intro margin-bottom-3"
+            >
+              {% translate "Find quick answers, walkthroughs, and ways to get in touch with the MDCS team." %}
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="grid-row grid-gap-lg margin-bottom-5"
+        >
+          <div
+            class="grid-col-12 desktop:grid-col-4"
+          >
+            <div
+              class="usa-card"
+            >
+              <div
+                class="usa-card__container"
+              >
+                <header
+                  class="usa-card__header"
+                >
+                  <h2
+                    class="usa-card__heading"
+                  >
+                    {% translate "New to MDCS?" %}
+                  </h2>
+                </header>
+                <div
+                  class="usa-card__body"
+                >
+                  <p
+                    class="usa-prose margin-bottom-2"
+                  >
+                    {% translate "Start here to understand the data curation workflow, required permissions, and the tools bundled with the platform." %}
+                  </p>
+                  <ul
+                    class="usa-list usa-list--unstyled usa-prose margin-bottom-0"
+                  >
+                    <li>
+                      <a
+                        class="usa-link"
+                        href="/docs/USE_CASES"
+                      >
+                        {% translate "Use case library" %}
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        class="usa-link"
+                        href="/docs/DATA_MODEL"
+                      >
+                        {% translate "Data model fundamentals" %}
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        class="usa-link"
+                        href="/docs/mdcs-dev-setup"
+                      >
+                        {% translate "Developer setup guide" %}
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="grid-col-12 desktop:grid-col-4"
+          >
+            <div
+              class="usa-card"
+            >
+              <div
+                class="usa-card__container"
+              >
+                <header
+                  class="usa-card__header"
+                >
+                  <h2
+                    class="usa-card__heading"
+                  >
+                    {% translate "How-to Resources" %}
+                  </h2>
+                </header>
+                <div
+                  class="usa-card__body"
+                >
+                  <p
+                    class="usa-prose margin-bottom-2"
+                  >
+                    {% translate "Step-by-step guidance for importing datasets, running analyses, and managing templates." %}
+                  </p>
+                  <ul
+                    class="usa-list usa-list--unstyled usa-prose margin-bottom-0"
+                  >
+                    <li>
+                      <a
+                        class="usa-link"
+                        href="/datasets/"
+                      >
+                        {% translate "Browse available datasets" %}
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        class="usa-link"
+                        href="/docs/OPEN_SOURCE"
+                      >
+                        {% translate "Normalize and transform data" %}
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        class="usa-link"
+                        href="/docs/README"
+                      >
+                        {% translate "Platform FAQ" %}
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="grid-col-12 desktop:grid-col-4"
+          >
+            <div
+              class="usa-card"
+            >
+              <div
+                class="usa-card__container"
+              >
+                <header
+                  class="usa-card__header"
+                >
+                  <h2
+                    class="usa-card__heading"
+                  >
+                    {% translate "Need Support?" %}
+                  </h2>
+                </header>
+                <div
+                  class="usa-card__body"
+                >
+                  <p
+                    class="usa-prose margin-bottom-3"
+                  >
+                    {% translate "Reach out to the MDCS maintainers for help with accounts, data migrations, or feature requests." %}
+                  </p>
+                  <a
+                    class="usa-button"
+                    href="/contact/"
+                  >
+                    {% translate "Contact us" %}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="grid-row grid-gap-lg margin-bottom-5"
+        >
+          <div
+            class="grid-col-12 desktop:grid-col-7"
+          >
+            <h2
+              class="usa-heading"
+            >
+              {% translate "Popular Questions" %}
+            </h2>
+            <ul
+              class="usa-accordion usa-accordion--bordered"
+            >
+              <li
+                class="usa-accordion__item"
+              >
+                <button
+                  class="usa-accordion__button"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="faq-imports"
+                >
+                  {% translate "How do I launch a new dataset import?" %}
+                </button>
+                <div
+                  id="faq-imports"
+                  class="usa-accordion__content usa-prose"
+                >
+                  <p>
+                    {% translate "Navigate to the Datasets catalog, choose a supported dataset, and use the Start Import action. Monitor download progress in the Transformation Pipeline card." %}
+                  </p>
+                </div>
+              </li>
+              <li
+                class="usa-accordion__item"
+              >
+                <button
+                  class="usa-accordion__button"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="faq-analysis"
+                >
+                  {% translate "What analysis modes are available?" %}
+                </button>
+                <div
+                  id="faq-analysis"
+                  class="usa-accordion__content usa-prose"
+                >
+                  <p>
+                    {% blocktrans %}MDCS ships with top-down, bottom-up, and hybrid analysis modes. Each mode can be configured per dataset in the Explore view once downloads are complete.{% endblocktrans %}
+                  </p>
+                </div>
+              </li>
+              <li
+                class="usa-accordion__item"
+              >
+                <button
+                  class="usa-accordion__button"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="faq-accounts"
+                >
+                  {% translate "Who can grant new user access?" %}
+                </button>
+                <div
+                  id="faq-accounts"
+                  class="usa-accordion__content usa-prose"
+                >
+                  <p>
+                    {% translate "Repository managers and MDCS administrators can create or elevate accounts. Submit a help ticket with the user's email, organization, and requested role." %}
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            class="grid-col-12 desktop:grid-col-5"
+          >
+            <div
+              class="usa-summary-box"
+              role="region"
+              aria-labelledby="support-summary-title"
+            >
+              <div
+                class="usa-summary-box__body"
+              >
+                <h3
+                  class="usa-summary-box__heading"
+                  id="support-summary-title"
+                >
+                  {% translate "Still need assistance?" %}
+                </h3>
+                <div
+                  class="usa-summary-box__text"
+                >
+                  <p
+                    class="usa-prose"
+                  >
+                    {% translate "Email mdcs-support@nist.gov or join the #mdcs Slack channel for real-time help. Include dataset names, job IDs, and timestamps whenever possible." %}
+                  </p>
+                </div>
+                <a
+                  class="usa-summary-box__link"
+                  href="mailto:mdcs-support@nist.gov"
+                >
+                  mdcs-support@nist.gov
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+{% endblock %}
+
+{% block branding %}
+<div class="admin-branding">
+    <a class="admin-branding__title" href="{% url 'admin:index' %}">
+        {{ site_header|default:_('MDCS Administration') }}
+    </a>
+    <p class="admin-branding__subtitle">
+        {% trans "Curate datasets, monitor imports, and configure the platform." %}
+    </p>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<div class="admin-global-actions">
+    <a class="admin-global-link" href="{% url 'dataset_imports:explore' %}">{% trans "Data explorer" %}</a>
+    <a class="admin-global-link" href="{% url 'dataset_imports:catalog' %}">{% trans "Catalog" %}</a>
+    <a class="admin-global-link" href="/">{% trans "View site" %}</a>
+</div>
+{% endblock %}

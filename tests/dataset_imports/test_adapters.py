@@ -74,8 +74,10 @@ class JSONLAdapterTests(TestCase):
         self.assertGreater(stats["normalized_bytes"], 0)
         self.assertEqual(stats["conversation_count"], 1)
         self.assertEqual(stats["stored_conversations"], 1)
+        self.assertEqual(stats["word_count"], 3)
         self.assertEqual(asset.variant, asset.Variant.NORMALIZED_JSONL)
         self.assertEqual(asset.metadata["conversation_count"], 1)
+        self.assertEqual(asset.metadata["word_count"], 3)
 
         asset_path = Path(asset.file.path)
         self.assertTrue(asset_path.exists())
@@ -240,4 +242,3 @@ class OASSTAdapterTests(TestCase):
         self.assertEqual(conversation.source_id, "tree-1")
         self.assertEqual(conversation.message_count, 2)
         self.assertEqual(conversation.messages[1].parent_turn_index, 0)
-

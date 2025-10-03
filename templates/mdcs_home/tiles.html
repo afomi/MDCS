@@ -1,14 +1,40 @@
-<h2 id="available-options">Available Options</h2>
-{% for tile in tiles %}
-<div class="tile">
-    <div class="icon">
-        <i class="fas {{ tile.logo }}"></i>
+<section class="usa-section" aria-labelledby="available-options">
+    <div class="grid-container">
+        <h2 id="available-options" class="usa-heading">Available options</h2>
+        <div class="usa-card-group">
+            {% for tile in tiles %}
+            <article class="usa-card">
+                <div class="usa-card__container">
+                    <header class="usa-card__header usa-media-block">
+                        <div class="usa-media-block__media" aria-hidden="true">
+                            <span class="usa-icon">
+                                <i class="fas {{ tile.logo }}"></i>
+                            </span>
+                        </div>
+                        <div class="usa-media-block__body">
+                            <h3 class="usa-card__heading">
+                                <a class="usa-link" href="{{ tile.link }}">
+                                    {{ tile.title }}
+                                </a>
+                            </h3>
+                        </div>
+                    </header>
+                    <div class="usa-card__body">
+                        <p>{{ tile.text }}</p>
+                    </div>
+                    <div class="usa-card__footer">
+                        <a
+                            class="usa-button usa-button--outline"
+                            href="{{ tile.link }}"
+                        >
+                            Visit<span class="usa-sr-only">{{ tile.title }}</span>
+                        </a>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <p>No options available at this time.</p>
+            {% endfor %}
+        </div>
     </div>
-    <div class="text">
-        <h3><a href="{{ tile.link }}">{{ tile.title }}</a></h3>
-        <p>
-            {{ tile.text }}
-        </p>
-    </div>
-</div>
-{% endfor %}
+</section>

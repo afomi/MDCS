@@ -247,3 +247,6 @@ venv/
 
 # Celery files
 celerybeat-schedule.*
+
+/node_modules/
+/static/vendor/

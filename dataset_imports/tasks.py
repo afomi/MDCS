@@ -2,22 +2,34 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from collections import Counter
 from dataclasses import dataclass
-from typing import Optional
+import io
+import gzip
+import bz2
+import lzma
+from pathlib import Path
 import re
+from typing import Optional
 
 from celery import shared_task
 from django.utils import timezone
 
 from .adapters import get_adapter
+from .constants import (
+    DEFAULT_CLUSTER_COUNT,
+    MAX_CLUSTER_DOCUMENTS,
+    CLUSTER_PREVIEW_PER_GROUP,
+)
 from .models import (
+    AnalysisJob,
+    AnalysisResult,
     DatasetArtifact,
     DatasetAsset,
     DatasetImport,
+    DatasetImportEvent,
     DatasetImportLog,
     DatasetProgressSnapshot,
-    MessageRecord,
+    log_dataset_event,
     sync_import_aggregates,
 )
 from .normalization import NormalizedConversation, load_conversations
@@ -25,10 +37,14 @@ from .preview import collect_download_preview
 from .services import DownloadError, ensure_storage_dir, stream_download
 
 PROGRESS_BATCH_SIZE = 100
+
 TOPIC_SAMPLE_LIMIT = 500
 TOPIC_KEYWORDS_PER_TOPIC = 4
 TOPIC_CLUSTERS = 3
-WORD_PATTERN = re.compile(r"[A-Za-z]{4,}")
+
+WORD_PATTERN = re.compile(r"[A-Za-z0-9']+")
+
+ANALYSIS_ALGORITHM_DEFAULT = "artifact-summary-v1"
 
 
 logger = logging.getLogger(__name__)
@@ -75,6 +91,14 @@ def _record_progress(import_obj: DatasetImport, event: ProgressEvent) -> None:
         )
         import_obj.status = DatasetImport.Status.DOWNLOADING
         import_obj.updated_at = timezone.now()
+        if not import_obj.events.filter(
+            event_type=DatasetImportEvent.Type.DOWNLOAD_START
+        ).exists():
+            log_dataset_event(
+                import_obj,
+                DatasetImportEvent.Type.DOWNLOAD_START,
+                details={"artifact_id": event.artifact_id},
+            )
 
 
 def _log(
@@ -322,11 +346,24 @@ def _normalize_artifact(
     conversation_count = 0
     stored_conversations = 0
     last_report_conversations = 0
+    word_count = 0
     pending_batch: list[NormalizedConversation] = []
 
     ensure_storage_dir(storage, path)
 
     with storage.open(path, "wb") as handle:
+        # Enforce optional per-artifact conversation cap from import notes
+        max_conversations = None
+        try:
+            if isinstance(import_obj.notes, dict):
+                raw_limits = import_obj.notes.get("normalize_limits") or {}
+                if isinstance(raw_limits, dict):
+                    raw = raw_limits.get(str(artifact.pk)) or raw_limits.get(artifact.pk)
+                    if raw is not None:
+                        max_conversations = int(raw)
+        except Exception:
+            max_conversations = None
+
         for conversation in adapter.process(artifact, artifact.file.name):
             pending_batch.append(conversation)
 
@@ -337,12 +374,25 @@ def _normalize_artifact(
             normalized_bytes += len(payload)
             conversation_count += 1
 
+            if max_conversations and conversation_count >= max_conversations:
+                # Flush any pending and stop early per limit
+                if pending_batch:
+                    stored_conversations += load_conversations(import_obj, pending_batch)
+                    pending_batch.clear()
+                break
+
+            for message in conversation.messages:
+                if message.content:
+                    tokens = _tokenize(message.content)
+                    word_count += len(tokens)
+
             if len(pending_batch) >= PROGRESS_BATCH_SIZE:
                 stored_conversations += load_conversations(import_obj, pending_batch)
                 pending_batch.clear()
 
             if conversation_count - last_report_conversations >= PROGRESS_BATCH_SIZE:
                 last_report_conversations = conversation_count
+                # Persist a lightweight progress snapshot and update artifact aggregates
                 DatasetProgressSnapshot.objects.create(
                     dataset_import=import_obj,
                     artifact=artifact,
@@ -351,6 +401,17 @@ def _normalize_artifact(
                     processed_bytes=normalized_bytes,
                     total_bytes=artifact.size_bytes,
                     message=f"Processed {conversation_count} conversations",
+                )
+                _record_progress(
+                    import_obj,
+                    ProgressEvent(
+                        status=DatasetArtifact.Status.PROCESSING,
+                        artifact_id=artifact.pk,
+                        downloaded_bytes=artifact.downloaded_bytes,
+                        processed_bytes=normalized_bytes,
+                        total_bytes=artifact.size_bytes,
+                        message="Processing",
+                    ),
                 )
 
     if pending_batch:
@@ -363,6 +424,7 @@ def _normalize_artifact(
         "conversation_count": conversation_count,
         "stored_conversations": stored_conversations,
         "adapter": import_obj.adapter,
+        "word_count": word_count,
     }
     asset.save()
 
@@ -370,6 +432,7 @@ def _normalize_artifact(
         "conversation_count": conversation_count,
         "stored_conversations": stored_conversations,
         "normalized_bytes": normalized_bytes,
+        "word_count": word_count,
     }
     return asset, stats
 
@@ -378,6 +441,17 @@ def _conversation_to_jsonl(conversation: NormalizedConversation) -> str:
     import json
 
     return json.dumps(conversation.to_dict(), ensure_ascii=False)
+
+
+def _tokenize(text: str) -> list[str]:
+    if not text:
+        return []
+    return [token for token in WORD_PATTERN.findall(text.lower()) if token]
+
+
+def _analysis_cancelled(import_obj: DatasetImport) -> bool:
+    import_obj.refresh_from_db(fields=["analysis_status", "status", "analysis_message"])
+    return import_obj.analysis_status == "cancelled" or import_obj.status == DatasetImport.Status.DOWNLOADED
 
 
 def _maybe_mark_downloaded(import_obj: DatasetImport) -> None:
@@ -395,6 +469,13 @@ def _maybe_mark_downloaded(import_obj: DatasetImport) -> None:
         if not failed_downloads:
             import_obj.mark_downloaded()
             _log(import_obj, "INFO", "All downloads complete - ready for analysis")
+            if not import_obj.events.filter(
+                event_type=DatasetImportEvent.Type.DOWNLOAD_COMPLETE
+            ).exists():
+                log_dataset_event(
+                    import_obj,
+                    DatasetImportEvent.Type.DOWNLOAD_COMPLETE,
+                )
         else:
             import_obj.status = DatasetImport.Status.FAILED
             import_obj.finished_at = timezone.now()
@@ -417,129 +498,467 @@ def _maybe_finalize_import(import_obj: DatasetImport) -> None:
         _log(import_obj, "INFO", "Import finalized", extra={"success": success})
 
 
-def _generate_topic_summary(import_obj: DatasetImport) -> dict[str, object]:
-    """Produce a lightweight topical summary from sampled messages."""
+def _inspect_artifact(artifact: DatasetArtifact) -> dict[str, object]:
+    stats: dict[str, object] = {
+        "filename": artifact.filename,
+        "status": artifact.status,
+        "downloaded_bytes": artifact.downloaded_bytes,
+        "size_bytes": artifact.size_bytes,
+    }
 
-    qs = (
-        MessageRecord.objects.filter(
-            conversation__dataset_import=import_obj,
-            role__in=("user", "assistant"),
-        )
-        .order_by("id")
-        .values_list("content", flat=True)[:TOPIC_SAMPLE_LIMIT]
+    if isinstance(artifact.metadata, dict):
+        preview = artifact.metadata.get("preview") or {}
+        if isinstance(preview, dict) and "row_count" in preview:
+            stats["row_count"] = preview.get("row_count")
+
+    file_field = artifact.file
+    if file_field and file_field.name:
+        try:
+            storage = file_field.storage
+            with storage.open(file_field.name, "rb") as handle:
+                chunk = handle.read(1024 * 64)
+                stats["sample_bytes"] = len(chunk)
+                if chunk:
+                    stats["sample_checksum"] = hashlib.sha256(chunk).hexdigest()
+        except Exception as exc:  # pragma: no cover - best effort diagnostics
+            stats["read_error"] = str(exc)
+
+    normalized_asset = (
+        artifact.assets.filter(variant=DatasetAsset.Variant.NORMALIZED_JSONL)
+        .order_by("-created_at")
+        .first()
+    )
+    if normalized_asset and isinstance(normalized_asset.metadata, dict):
+        meta = normalized_asset.metadata
+        if meta.get("conversation_count") is not None and "row_count" not in stats:
+            stats["row_count"] = meta.get("conversation_count")
+        if meta.get("word_count") is not None:
+            stats["word_count"] = meta.get("word_count")
+
+    fallback_stats = _compute_artifact_stats_fallback(artifact)
+    for key, value in fallback_stats.items():
+        if key not in stats and value is not None:
+            stats[key] = value
+
+    return stats
+
+
+def _compute_artifact_stats_fallback(artifact: DatasetArtifact) -> dict[str, int | None]:
+    """Best-effort metrics when normalized metadata is unavailable."""
+
+    file_field = artifact.file
+    if not file_field or not file_field.name:
+        return {}
+
+    suffix = Path(artifact.filename or "").suffix.lower()
+
+    def _text_stream(raw_handle):
+        if suffix in {".gz", ".gzip"}:
+            return io.TextIOWrapper(gzip.GzipFile(fileobj=raw_handle), encoding="utf-8", errors="ignore")
+        if suffix in {".bz2", ".bzip2"}:
+            return io.TextIOWrapper(bz2.BZ2File(raw_handle), encoding="utf-8", errors="ignore")
+        if suffix in {".xz", ".lzma"}:
+            return io.TextIOWrapper(lzma.LZMAFile(raw_handle), encoding="utf-8", errors="ignore")
+        return io.TextIOWrapper(raw_handle, encoding="utf-8", errors="ignore")
+
+    try:
+        storage = file_field.storage
+        with storage.open(file_field.name, "rb") as raw_handle:
+            with _text_stream(raw_handle) as reader:
+                word_total = 0
+                row_total = 0
+                for line in reader:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    row_total += 1
+                    word_total += len(_tokenize(stripped))
+        return {
+            "row_count": row_total if row_total > 0 else None,
+            "word_count": word_total if word_total > 0 else None,
+        }
+    except Exception:  # pragma: no cover - defensive fallback
+        logger.debug("Failed to compute artifact stats fallback for artifact %s", artifact.pk, exc_info=True)
+        return {}
+
+
+def _run_topic_clustering(
+    import_obj: DatasetImport,
+    *,
+    cluster_count: int,
+    max_documents: int = MAX_CLUSTER_DOCUMENTS,
+) -> dict[str, object]:
+    """Cluster conversation documents for conversational datasets (e.g., OASST1)."""
+
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.cluster import MiniBatchKMeans
+    except ImportError as exc:  # pragma: no cover - library guard
+        logger.error("Clustering dependencies missing: %s", exc)
+        return {}
+
+    documents: list[str] = []
+    conversation_refs: list[dict[str, object]] = []
+
+    conversations_qs = (
+        import_obj.conversations.order_by("id").prefetch_related("messages")
     )
 
-    sample = [content for content in qs if content]
-    if not sample:
-        return {
-            "status": "no-data",
-            "message": "No normalized conversations available yet. Finish processing to unlock topic summaries.",
-        }
+    for conversation in conversations_qs[:max_documents]:
+        texts = [
+            message.content.strip()
+            for message in conversation.messages.all()
+            if message.content
+        ]
+        if not texts:
+            continue
 
-    keyword_counts: Counter[str] = Counter()
-    snippets: list[str] = []
+        combined_text = " ".join(texts)
+        if not combined_text.strip():
+            continue
 
-    for content in sample:
-        words = WORD_PATTERN.findall(content.lower())
-        if words:
-            keyword_counts.update(words[:20])
-        if len(snippets) < TOPIC_CLUSTERS and len(content.strip()) > 40:
-            snippets.append(content.strip())
-
-    if not keyword_counts:
-        return {
-            "status": "no-keywords",
-            "message": "Unable to derive keywords from the sampled messages.",
-            "sampled_messages": len(sample),
-        }
-
-    top_terms = [term for term, _ in keyword_counts.most_common(TOPIC_CLUSTERS * TOPIC_KEYWORDS_PER_TOPIC)]
-    topics: list[dict[str, object]] = []
-    for idx in range(TOPIC_CLUSTERS):
-        start = idx * TOPIC_KEYWORDS_PER_TOPIC
-        keywords = top_terms[start : start + TOPIC_KEYWORDS_PER_TOPIC]
-        if not keywords:
-            break
-        topics.append(
+        documents.append(combined_text)
+        conversation_refs.append(
             {
-                "label": f"Theme {idx + 1}",
-                "keywords": keywords,
-                "sample": snippets[idx] if idx < len(snippets) else "",
+                "source_id": conversation.source_id,
+                "title": conversation.title or f"Conversation {conversation.pk}",
+                "preview": texts[0][:240],
             }
         )
 
+    document_count = len(documents)
+    if document_count < 2:
+        return {
+            "document_count": document_count,
+            "cluster_count": 0,
+            "clusters": [],
+            "vectorizer": "tfidf",
+            "algorithm": "minibatch-kmeans",
+            "status": "insufficient-documents",
+            "note": "At least two conversations are required to form topic clusters.",
+        }
+
+    effective_clusters = max(2, min(cluster_count, document_count))
+
+    vectorizer = TfidfVectorizer(max_features=5000, stop_words="english")
+    matrix = vectorizer.fit_transform(documents)
+
+    kmeans = MiniBatchKMeans(
+        n_clusters=effective_clusters,
+        random_state=42,
+        batch_size=256,
+        n_init="auto",
+    )
+    labels = kmeans.fit_predict(matrix)
+    feature_names = vectorizer.get_feature_names_out()
+
+    clusters: list[dict[str, object]] = []
+    for cluster_idx in range(effective_clusters):
+        member_indices = [
+            idx for idx, label in enumerate(labels) if label == cluster_idx
+        ]
+        if not member_indices:
+            continue
+
+        centroid = kmeans.cluster_centers_[cluster_idx]
+        top_term_indices = centroid.argsort()[-10:][::-1]
+        top_terms = [
+            feature_names[idx]
+            for idx in top_term_indices
+            if centroid[idx] > 0
+        ]
+
+        samples: list[dict[str, object]] = []
+        for doc_idx in member_indices[:CLUSTER_PREVIEW_PER_GROUP]:
+            ref = conversation_refs[doc_idx]
+            samples.append(
+                {
+                    "title": ref["title"],
+                    "source_id": ref["source_id"],
+                    "excerpt": ref["preview"],
+                }
+            )
+
+        clusters.append(
+            {
+                "cluster_id": cluster_idx,
+                "size": len(member_indices),
+                "top_terms": top_terms[:10],
+                "sample_conversations": samples,
+            }
+        )
+
+    clusters.sort(key=lambda item: item["size"], reverse=True)
+
+    if not clusters:
+        return {
+            "document_count": document_count,
+            "cluster_count": 0,
+            "clusters": [],
+            "vectorizer": "tfidf",
+            "algorithm": "minibatch-kmeans",
+            "status": "no-clusters",
+            "note": "Clustering finished but produced no groups. Try a smaller cluster count or ensure conversations contain diverse content.",
+        }
+
     return {
+        "document_count": document_count,
+        "cluster_count": effective_clusters,
+        "clusters": clusters,
+        "vectorizer": "tfidf",
+        "algorithm": "minibatch-kmeans",
         "status": "ok",
-        "sampled_messages": len(sample),
-        "top_keywords": top_terms,
-        "topics": topics,
     }
 
 
 @shared_task(bind=True)
-def run_dataset_analysis(self, import_id: int) -> None:
-    """Run analysis on a downloaded dataset import."""
+def run_dataset_analysis(self, import_id: int, job_id: int | None = None) -> None:
+    """Run a lightweight analysis over downloaded artifacts."""
+
     import_obj = DatasetImport.objects.get(pk=import_id)
 
-    if import_obj.status != DatasetImport.Status.DOWNLOADED:
+    allowed_statuses = {
+        DatasetImport.Status.DOWNLOADED,
+        DatasetImport.Status.COMPLETED,
+    }
+
+    if import_obj.status not in allowed_statuses:
         _log(import_obj, "ERROR", f"Cannot analyze import with status: {import_obj.status}")
         return
 
-    _log(import_obj, "INFO", "Analysis execution started", extra={"task_id": self.request.id})
+    task_id = self.request.id
+    _log(import_obj, "INFO", "Analysis execution started", extra={"task_id": task_id})
 
+    notes = import_obj.notes if isinstance(import_obj.notes, dict) else {}
+    notes = dict(notes or {})
+
+    requested_mode = notes.get("analysis_mode") or ANALYSIS_ALGORITHM_DEFAULT
+    cluster_pref = notes.get("analysis_cluster_count")
     try:
-        # Start analysis phase
+        cluster_pref_int = int(cluster_pref) if cluster_pref is not None else None
+    except (TypeError, ValueError):
+        cluster_pref_int = None
+
+    job: AnalysisJob | None = None
+    if job_id:
+        job = AnalysisJob.objects.filter(pk=job_id, dataset_import=import_obj).first()
+    if not job:
+        job = AnalysisJob.objects.create(
+            dataset_import=import_obj,
+            requested_mode=requested_mode,
+            requested_cluster_count=cluster_pref_int,
+            status=AnalysisJob.Status.RUNNING,
+        )
+        job_id = job.pk
+
+    job.task_id = task_id
+    job.save(update_fields=["task_id", "updated_at"])
+
+    notes["analysis_job_id"] = job_id
+    import_obj.notes = notes
+    import_obj.save(update_fields=["notes", "updated_at"])
+
+    cancelled = False
+    try:
         import_obj.start_analysis()
+        import_obj.set_analysis_task_id(task_id)
+        log_dataset_event(
+            import_obj,
+            DatasetImportEvent.Type.ANALYSIS_START,
+            details={"task_id": task_id},
+        )
 
-        # Analysis steps from django-test reference implementation
-        analysis_steps = [
-            (25, "Validating records"),
-            (50, "Normalizing schema"),
-            (75, "Extracting topics"),
-            (100, "Indexing documents"),
-        ]
+        artifacts = list(
+            import_obj.artifacts.filter(
+                status__in=[
+                    DatasetArtifact.Status.DOWNLOADED,
+                    DatasetArtifact.Status.COMPLETED,
+                ]
+            ).order_by("sequence", "id")
+        )
 
-        for progress, message in analysis_steps:
+        total_artifacts = len(artifacts)
+        summary_rows: list[dict[str, object]] = []
+        total_bytes = 0
+
+        if not artifacts:
+            import_obj.update_analysis_progress(25, "No downloaded artifacts to inspect")
+
+        for index, artifact in enumerate(artifacts, start=1):
+            if _analysis_cancelled(import_obj):
+                cancelled = True
+                break
+
+            progress = int(((index - 1) / max(total_artifacts, 1)) * 100)
+            message = f"Inspecting {artifact.filename}"
             import_obj.update_analysis_progress(progress, message)
+            _log(import_obj, "INFO", message, extra={"artifact_id": artifact.pk})
 
-            # Get all downloaded artifacts and process them
-            if progress == 25:
-                # Validation step - could add actual validation logic here
-                import time
-                time.sleep(2)  # Simulate processing time
+            stats = _inspect_artifact(artifact)
+            summary_rows.append(stats)
+            total_bytes += artifact.downloaded_bytes
 
-            elif progress == 50:
-                # Schema normalization - process each artifact
-                artifacts = import_obj.artifacts.filter(status=DatasetArtifact.Status.DOWNLOADED)
-                for artifact in artifacts:
-                    process_artifact.delay(artifact.pk)
+            if _analysis_cancelled(import_obj):
+                cancelled = True
+                break
 
-                # Wait for processing to complete
-                import time
-                time.sleep(5)  # Give processing time to start
+            progress_after = int((index / max(total_artifacts, 1)) * 100)
+            import_obj.update_analysis_progress(progress_after, f"Finished {artifact.filename}")
 
-            elif progress == 75:
-                # Topic extraction - placeholder for actual topic modeling
-                import time
-                time.sleep(3)  # Simulate topic analysis
+        if cancelled or _analysis_cancelled(import_obj):
+            _log(import_obj, "INFO", "Analysis cancelled before completion")
+            return
 
-            elif progress == 100:
-                # Document indexing - placeholder for search index creation
-                import time
-                time.sleep(2)  # Simulate indexing
+        import_obj.update_analysis_progress(100, "Aggregating results")
 
-        # Mark analysis as completed
-        import_obj.mark_analysis_completed(success=True)
-        summary = _generate_topic_summary(import_obj)
+        row_total = 0
+        word_total = 0
+
+        for row in summary_rows:
+            row_total += int(row.get("row_count") or 0)
+            word_total += int(row.get("word_count") or 0)
+
+        summary: dict[str, object] = {
+            "status": "ok",
+            "artifact_count": total_artifacts,
+            "total_downloaded_bytes": total_bytes,
+            "artifacts": summary_rows,
+            "total_row_count": row_total,
+            "total_word_count": word_total,
+        }
+
         notes = import_obj.notes if isinstance(import_obj.notes, dict) else {}
+
+        algorithm = notes.get("analysis_mode") or ANALYSIS_ALGORITHM_DEFAULT
+        dataset_identifier = notes.get("dataset_id") or import_obj.adapter
+
+        if algorithm == "topic-clusters":
+            # Topic clustering is supported for any dataset that yields normalized
+            # conversations; skip the expensive work if no conversations exist yet.
+            if import_obj.conversations.exists():
+                requested_clusters = notes.get("analysis_cluster_count")
+                try:
+                    requested_clusters = int(requested_clusters)
+                except (TypeError, ValueError):
+                    requested_clusters = DEFAULT_CLUSTER_COUNT
+
+                requested_clusters = max(2, min(requested_clusters, 50))
+                summary["requested_cluster_count"] = requested_clusters
+
+                # Document limit for clustering (cap between 100 and 20000 for memory safety)
+                requested_doc_limit = notes.get("analysis_cluster_doc_limit")
+                try:
+                    requested_doc_limit = int(requested_doc_limit)
+                except (TypeError, ValueError):
+                    requested_doc_limit = MAX_CLUSTER_DOCUMENTS
+                requested_doc_limit = max(100, min(requested_doc_limit, 20000))
+                summary["requested_document_limit"] = requested_doc_limit
+
+                clustering = _run_topic_clustering(
+                    import_obj,
+                    cluster_count=requested_clusters,
+                    max_documents=requested_doc_limit,
+                )
+
+                clusters = clustering.get("clusters") or []
+                summary["cluster_overview"] = {
+                    "cluster_count": clustering.get("cluster_count", len(clusters)),
+                    "document_count": clustering.get("document_count", 0),
+                    "vectorizer": clustering.get("vectorizer"),
+                    "algorithm": clustering.get("algorithm"),
+                    "status": clustering.get("status"),
+                    "note": clustering.get("note"),
+                    "requested_count": requested_clusters,
+                }
+                summary["clusters"] = clusters
+                if job:
+                    job.cluster_count = clustering.get("cluster_count")
+                    job.document_count = clustering.get("document_count")
+            else:
+                requested_clusters = notes.get("analysis_cluster_count") or DEFAULT_CLUSTER_COUNT
+                summary["requested_cluster_count"] = requested_clusters
+                summary["cluster_overview"] = {
+                    "cluster_count": 0,
+                    "document_count": 0,
+                    "status": "no-conversations",
+                    "note": "Topic clustering requires normalized conversations. Rerun analysis after processing completes.",
+                    "requested_count": requested_clusters,
+                }
+                summary["clusters"] = []
+
+        if job:
+            job.requested_mode = requested_mode
+            # Preserve existing requested_cluster_count for non-clustering modes.
+            requested = summary.get("requested_cluster_count")
+            if algorithm == "topic-clusters" and requested is not None:
+                job.requested_cluster_count = requested
+            if algorithm == "topic-clusters":
+                job.mark_complete(
+                    algorithm=summary.get("cluster_overview", {}).get("algorithm") or algorithm,
+                    clusters=summary.get("cluster_overview", {}).get("cluster_count"),
+                    documents=summary.get("cluster_overview", {}).get("document_count"),
+                    metadata={
+                        "summary_status": summary.get("status"),
+                        "cluster_overview": summary.get("cluster_overview"),
+                    },
+                )
+            else:
+                # For non-clustering algorithms, report the total document count and requested clusters (if any)
+                doc_count = import_obj.conversations.count()
+                job.mark_complete(
+                    algorithm=algorithm,
+                    clusters=job.requested_cluster_count,
+                    documents=doc_count,
+                    metadata={
+                        "summary_status": summary.get("status"),
+                    },
+                )
+
         notes["analysis_summary"] = summary
+        notes.pop("analysis_job_id", None)
         import_obj.notes = notes
         import_obj.save(update_fields=["notes", "updated_at"])
-        _log(import_obj, "INFO", "Analysis completed successfully", extra={"summary_status": summary.get("status")})
+
+        AnalysisResult.objects.update_or_create(
+            dataset_import=import_obj,
+            defaults={
+                "dataset_id": dataset_identifier,
+                "algorithm": algorithm,
+                "summary": summary,
+            },
+        )
+
+        import_obj.mark_analysis_completed(success=True)
+        log_dataset_event(
+            import_obj,
+            DatasetImportEvent.Type.ANALYSIS_COMPLETE,
+            details={
+                "artifact_count": total_artifacts,
+                "total_downloaded_bytes": total_bytes,
+            },
+        )
+        _log(import_obj, "INFO", "Analysis completed successfully", extra={"artifact_count": total_artifacts})
 
     except Exception as exc:
         import_obj.mark_analysis_completed(success=False)
         import_obj.last_error = str(exc)
         import_obj.save(update_fields=["last_error", "updated_at"])
+        if job:
+            job.mark_failed(str(exc))
+        notes.pop("analysis_job_id", None)
+        import_obj.notes = notes
+        import_obj.save(update_fields=["notes", "updated_at"])
+        log_dataset_event(
+            import_obj,
+            DatasetImportEvent.Type.ANALYSIS_ERROR,
+            message=str(exc),
+        )
         _log(import_obj, "ERROR", f"Analysis failed: {exc}")
         raise
+    finally:
+        import_obj.set_analysis_task_id(None)
+        if job and job.status == AnalysisJob.Status.RUNNING:
+            job.mark_cancelled("Analysis terminated before completion")
+        if notes.pop("analysis_job_id", None) is not None:
+            import_obj.notes = notes
+            import_obj.save(update_fields=["notes", "updated_at"])

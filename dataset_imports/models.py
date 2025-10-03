@@ -151,6 +151,69 @@ class DatasetImport(models.Model):
             "analysis_finished_at", "status", "updated_at"
         ])
 
+    def reset_analysis(self) -> None:
+        """Return the import to a downloaded state without removing artifacts."""
+
+        notes = dict(self.notes or {})
+        notes.pop("analysis_task_id", None)
+        notes.pop("analysis_job_id", None)
+
+        fields = {
+            "status": self.Status.DOWNLOADED,
+            "analysis_status": "",
+            "analysis_progress": 0,
+            "analysis_message": "",
+            "analysis_started_at": None,
+            "analysis_finished_at": None,
+            "updated_at": timezone.now(),
+            "notes": notes,
+        }
+
+        DatasetImport.objects.filter(pk=self.pk).update(**fields)
+        for key, value in fields.items():
+            setattr(self, key, value)
+
+    def cancel_analysis(self, *, reason: str | None = None) -> None:
+        """Cancel in-flight analysis while keeping downloaded artifacts."""
+
+        now = timezone.now()
+        message = (reason or "Analysis cancelled by user")[:255]
+        notes = dict(self.notes or {})
+        notes.pop("analysis_task_id", None)
+        notes.pop("analysis_job_id", None)
+        fields = {
+            "status": self.Status.DOWNLOADED,
+            "analysis_status": "cancelled",
+            "analysis_progress": 0,
+            "analysis_message": message,
+            "analysis_finished_at": now,
+            "updated_at": now,
+            "notes": notes,
+        }
+
+        DatasetImport.objects.filter(pk=self.pk).update(**fields)
+        for key, value in fields.items():
+            setattr(self, key, value)
+        self.notes = notes
+
+    def set_analysis_task_id(self, task_id: str | None) -> None:
+        """Record or clear the Celery task identifier for analysis."""
+
+        notes = dict(self.notes or {})
+        if task_id:
+            notes["analysis_task_id"] = task_id
+        else:
+            notes.pop("analysis_task_id", None)
+
+        now = timezone.now()
+
+        DatasetImport.objects.filter(pk=self.pk).update(
+            notes=notes,
+            updated_at=now,
+        )
+        self.notes = notes
+        self.updated_at = now
+
 
 class DatasetArtifact(models.Model):
     """Represents a downloadable file that belongs to an import."""
@@ -261,6 +324,110 @@ class DatasetAsset(models.Model):
         return f"{self.dataset_import.slug}:{self.variant}:{self.id}"
 
 
+class AnalysisResult(models.Model):
+    """Persisted summary produced by the analysis pipeline."""
+
+    dataset_import = models.OneToOneField(
+        DatasetImport,
+        on_delete=models.CASCADE,
+        related_name="analysis_result",
+    )
+    dataset_id = models.CharField(max_length=128, db_index=True)
+    algorithm = models.CharField(
+        max_length=64,
+        help_text=_("Identifier for the analysis algorithm used."),
+    )
+    summary = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["dataset_id"]),
+            models.Index(fields=["algorithm"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover - admin helper
+        return f"AnalysisResult(import={self.dataset_import_id}, algorithm={self.algorithm})"
+
+
+class AnalysisJob(models.Model):
+    """Lifecycle record for a dataset analysis execution."""
+
+    class Status(models.TextChoices):
+        RUNNING = "running", _("Running")
+        COMPLETED = "completed", _("Completed")
+        FAILED = "failed", _("Failed")
+        CANCELLED = "cancelled", _("Cancelled")
+
+    dataset_import = models.ForeignKey(
+        DatasetImport,
+        on_delete=models.CASCADE,
+        related_name="analysis_jobs",
+    )
+    requested_mode = models.CharField(max_length=64, blank=True)
+    requested_cluster_count = models.PositiveIntegerField(null=True, blank=True)
+    algorithm = models.CharField(max_length=64, blank=True)
+    status = models.CharField(
+        max_length=32,
+        choices=Status.choices,
+        default=Status.RUNNING,
+    )
+    task_id = models.CharField(max_length=128, blank=True)
+    error = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    cluster_count = models.PositiveIntegerField(null=True, blank=True)
+    document_count = models.PositiveIntegerField(null=True, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-started_at",)
+        indexes = [
+            models.Index(fields=["dataset_import", "status"]),
+            models.Index(fields=["dataset_import", "started_at"]),
+        ]
+
+    def mark_complete(self, *, algorithm: str | None = None, clusters: int | None = None, documents: int | None = None, metadata: dict | None = None) -> None:
+        self.status = self.Status.COMPLETED
+        self.finished_at = timezone.now()
+        if algorithm:
+            self.algorithm = algorithm
+        if clusters is not None:
+            self.cluster_count = clusters
+        if documents is not None:
+            self.document_count = documents
+        if metadata is not None:
+            self.metadata = metadata
+        self.error = ""
+        self.save(update_fields=[
+            "status",
+            "finished_at",
+            "algorithm",
+            "cluster_count",
+            "document_count",
+            "metadata",
+            "error",
+            "updated_at",
+        ])
+
+    def mark_failed(self, message: str) -> None:
+        self.status = self.Status.FAILED
+        self.finished_at = timezone.now()
+        self.error = message[:2000]
+        self.save(update_fields=["status", "finished_at", "error", "updated_at"])
+
+    def mark_cancelled(self, message: str | None = None) -> None:
+        self.status = self.Status.CANCELLED
+        self.finished_at = timezone.now()
+        if message:
+            self.error = message[:2000]
+        self.save(update_fields=["status", "finished_at", "error", "updated_at"])
+
+
 class DatasetProgressSnapshot(models.Model):
     """Immutable record of progress used for auditing UI updates."""
 
@@ -329,6 +496,53 @@ class DatasetImportLog(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"[{self.level}] {self.dataset_import.slug}: {self.message[:60]}"
+
+
+class DatasetImportEvent(models.Model):
+    """Human-friendly audit events for key ingestion milestones."""
+
+    class Type(models.TextChoices):
+        DOWNLOAD_START = "download_start", _("Download started")
+        DOWNLOAD_COMPLETE = "download_complete", _("Download complete")
+        ANALYSIS_START = "analysis_start", _("Analysis started")
+        ANALYSIS_COMPLETE = "analysis_complete", _("Analysis complete")
+        ANALYSIS_ERROR = "analysis_error", _("Analysis error")
+        ANALYSIS_CANCEL = "analysis_cancel", _("Analysis cancelled")
+
+    dataset_import = models.ForeignKey(
+        DatasetImport,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    event_type = models.CharField(max_length=32, choices=Type.choices)
+    message = models.CharField(max_length=255, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        indexes = [
+            models.Index(fields=["dataset_import", "created_at"]),
+            models.Index(fields=["event_type"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.dataset_import.slug}:{self.event_type}:{self.created_at:%Y-%m-%d %H:%M:%S}"
+
+
+def log_dataset_event(
+    import_obj: DatasetImport,
+    event_type: str,
+    *,
+    message: str = "",
+    details: dict | None = None,
+) -> DatasetImportEvent:
+    return DatasetImportEvent.objects.create(
+        dataset_import=import_obj,
+        event_type=event_type,
+        message=(message or "")[:255],
+        details=details or {},
+    )
 
 
 class ConversationRecord(models.Model):
@@ -417,3 +631,70 @@ def sync_import_aggregates(import_obj: DatasetImport) -> None:
             "updated_at",
         ]
     )
+
+    reconcile_import_status(import_obj)
+
+
+def reconcile_import_status(
+    import_obj: DatasetImport,
+    *,
+    download_complete: bool | None = None,
+    has_failures: bool | None = None,
+) -> None:
+    """Ensure the import status reflects the current artifact download state."""
+
+    allowed_statuses = {
+        DatasetImport.Status.PENDING,
+        DatasetImport.Status.QUEUED,
+        DatasetImport.Status.DOWNLOADING,
+    }
+
+    if import_obj.status not in allowed_statuses:
+        return
+
+    if download_complete is None:
+        completed_download_states = (
+            DatasetArtifact.Status.DOWNLOADED,
+            DatasetArtifact.Status.COMPLETED,
+            DatasetArtifact.Status.FAILED,
+        )
+
+        pending_downloads = import_obj.artifacts.exclude(
+            status__in=completed_download_states
+        ).exists()
+        if pending_downloads:
+            return
+    elif not download_complete:
+        return
+
+    if has_failures is None:
+        failed_downloads = import_obj.artifacts.filter(
+            status=DatasetArtifact.Status.FAILED
+        ).exists()
+    else:
+        failed_downloads = has_failures
+    now = timezone.now()
+
+    if failed_downloads:
+        update_kwargs = {
+            "status": DatasetImport.Status.FAILED,
+            "updated_at": now,
+        }
+        if not import_obj.finished_at:
+            update_kwargs["finished_at"] = now
+        updated = DatasetImport.objects.filter(pk=import_obj.pk).update(**update_kwargs)
+        if updated:
+            import_obj.status = DatasetImport.Status.FAILED
+            import_obj.updated_at = now
+            if "finished_at" in update_kwargs:
+                import_obj.finished_at = update_kwargs["finished_at"]
+        return
+
+    updated = (
+        DatasetImport.objects.filter(pk=import_obj.pk)
+        .exclude(status=DatasetImport.Status.DOWNLOADED)
+        .update(status=DatasetImport.Status.DOWNLOADED, updated_at=now)
+    )
+    if updated:
+        import_obj.status = DatasetImport.Status.DOWNLOADED
+        import_obj.updated_at = now

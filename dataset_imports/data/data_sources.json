@@ -65,6 +65,20 @@
     "adapter": "parquet-conversations"
   },
   {
+    "id": "dev_dataset",
+    "name": "Dev Dataset",
+    "description": "Tiny JSONL conversations for clustering UI/dev.",
+    "notes": "Single local JSONL with a handful of conversations.",
+    "artifacts": [
+      {
+        "filename": "dev/dev_messages.jsonl",
+        "download_url": "http://lvh.me/static/dev/dev_messages.jsonl"
+      }
+    ],
+    "adapter": "jsonl-conversations",
+    "supported": true
+  },
+  {
     "id": "oasst1",
     "name": "OpenAssistant Conversations (OASST1)",
     "description": "Multilingual assistant-style conversations collected by the OpenAssistant project.",

@@ -1,0 +1,152 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html
+  lang="en"
+>
+  <head>
+    <meta
+      charset="utf-8"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>
+      {% translate "Contact" %} · MDCS
+    </title>
+    <link
+      rel="stylesheet"
+      href="{% static 'vendor/uswds/css/uswds.min.css' %}"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'css/uswds-overrides.css' %}"
+    />
+    <script
+      src="{% static 'vendor/uswds/js/uswds-init.min.js' %}"
+      defer
+    ></script>
+    <script
+      src="{% static 'vendor/uswds/js/uswds.min.js' %}"
+      defer
+    ></script>
+  </head>
+  <body>
+    <main
+      id="main-content"
+      class="usa-section"
+    >
+      <div
+        class="grid-container"
+      >
+        <div
+          class="grid-row grid-gap-lg"
+        >
+          <div
+            class="grid-col-12 desktop:grid-col-8"
+          >
+            <h1
+              class="usa-heading"
+            >
+              {% translate "Contact" %}
+            </h1>
+            <p
+              class="usa-intro"
+            >
+              {% translate "Send us your questions or feedback using the form below." %}
+            </p>
+            {% if success or message_sent or email_sent %}
+            <div
+              class="usa-alert usa-alert--success"
+              role="status"
+            >
+              <div
+                class="usa-alert__body"
+              >
+                <h2
+                  class="usa-alert__heading"
+                >
+                  {% translate "Message sent" %}
+                </h2>
+                <p
+                  class="usa-alert__text"
+                >
+                  {% translate "Thanks for reaching out. We will respond shortly." %}
+                </p>
+              </div>
+            </div>
+            {% endif %}
+            <form
+              method="post"
+              novalidate
+              class="usa-form"
+            >
+              {% csrf_token %}
+              {% for hidden_field in form.hidden_fields %}
+              {{ hidden_field }}
+              {% endfor %}
+              {% if form.non_field_errors %}
+              <div
+                class="usa-alert usa-alert--error"
+                role="alert"
+              >
+                <div
+                  class="usa-alert__body"
+                >
+                  <h2
+                    class="usa-alert__heading"
+                  >
+                    {% translate "Please correct the following" %}
+                  </h2>
+                  {% for error in form.non_field_errors %}
+                  <p
+                    class="usa-alert__text"
+                  >
+                    {{ error }}
+                  </p>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+              {% for field in form.visible_fields %}
+              <div
+                class="usa-form-group{% if field.errors %} usa-form-group--error{% endif %}"
+              >
+                <label
+                  class="usa-label"
+                  for="{{ field.id_for_label }}"
+                >
+                  {{ field.label }}
+                </label>
+                {% if field.help_text %}
+                <div
+                  class="usa-hint"
+                  id="{{ field.id_for_label }}_hint"
+                >
+                  {{ field.help_text }}
+                </div>
+                {% endif %}
+                {% for error in field.errors %}
+                <div
+                  class="usa-error-message"
+                  role="alert"
+                >
+                  {{ error }}
+                </div>
+                {% endfor %}
+                {{ field }}
+              </div>
+              {% endfor %}
+              <button
+                type="submit"
+                class="usa-button"
+              >
+                {% translate "Send message" %}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

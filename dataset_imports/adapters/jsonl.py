@@ -54,7 +54,8 @@ class JSONLConversationsAdapter(DatasetAdapter):
         messages: List[NormalizedMessage] = []
         for idx, turn in enumerate(turns):
             role = normalize_role(turn.get("role") or turn.get("from") or "other")
-            content = turn.get("content") or turn.get("value") or ""
+            # Fallback to 'text' when conversations are serialized with 'text' fields
+            content = turn.get("content") or turn.get("value") or turn.get("text") or ""
             messages.append(
                 NormalizedMessage(
                     role=role,
@@ -85,4 +86,3 @@ class JSONLConversationsAdapter(DatasetAdapter):
         msg = NormalizedMessage(role="user", content=content, turn_index=0, metadata={})
         conversation_id = str(record.get("id") or metadata.get("prompt_id") or hash(content))
         return NormalizedConversation(source_id=conversation_id, messages=[msg], metadata=metadata)
-

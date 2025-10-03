@@ -1,253 +1,173 @@
 {% load static %}
-<style>
-  .homepage-hero {
-    background: linear-gradient(135deg, #f5f7ff 0%, #edf2ff 100%);
-    color: #1f2937;
-    border-radius: 24px;
-    padding: 3rem 2rem;
-    margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
-  }
-  .homepage-hero h1 {
-    font-size: clamp(2.4rem, 4vw, 3rem);
-    font-weight: 700;
-    margin-bottom: 1rem;
-  }
-  .homepage-hero p {
-    font-size: 1.1rem;
-    max-width: 640px;
-  }
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(59, 130, 246, 0.12);
-    color: #1d4ed8;
-    border-radius: 999px;
-    padding: 0.4rem 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.75rem;
-  }
-  .feature-grid {
-    display: grid;
-    gap: 1.5rem;
-    margin-top: 2.5rem;
-  }
-  @media (min-width: 768px) {
-    .feature-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  .feature-card {
-    background: #fff;
-    border-radius: 18px;
-    padding: 1.5rem;
-    box-shadow: 0 12px 30px rgba(9, 10, 15, 0.08);
-    height: 100%;
-  }
-  .feature-card h3 {
-    font-size: 1.15rem;
-    margin-bottom: 0.6rem;
-  }
-  .feature-card p {
-    font-size: 0.9rem;
-    color: #505468;
-  }
-  .tool-grid {
-    display: grid;
-    gap: 1.5rem;
-    margin-top: 2rem;
-  }
-  @media (min-width: 992px) {
-    .tool-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  .tool-card {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-    position: relative;
-    overflow: hidden;
-  }
-  .tool-card h2 {
-    font-size: 1.3rem;
-    margin-bottom: 0.75rem;
-  }
-  .tool-card p {
-    color: #4b5563;
-    font-size: 0.95rem;
-  }
-  .tool-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #2563eb;
-    background: rgba(37,99,235,0.12);
-    border-radius: 999px;
-    padding: 0.35rem 0.8rem;
-    margin-bottom: 1rem;
-  }
-  .tool-steps {
-    margin-top: 1.25rem;
-  }
-  .tool-step {
-    display: flex;
-    gap: 0.9rem;
-    align-items: flex-start;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid rgba(15,23,42,0.08);
-  }
-  .tool-step:last-child {
-    border-bottom: none;
-  }
-  .tool-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: #eef2ff;
-    color: #1e3a8a;
-    display: grid;
-    place-items: center;
-    font-size: 1.1rem;
-  }
-  .tool-step h4 {
-    font-size: 0.95rem;
-    margin-bottom: 0.25rem;
-  }
-  .tool-step p {
-    font-size: 0.85rem;
-    color: #4b5563;
-    margin-bottom: 0;
-  }
-  .alert-panel {
-    background: #fff7ed;
-    border: 1px solid #fdba74;
-    border-radius: 18px;
-    padding: 1.5rem;
-    margin-top: 2rem;
-  }
-  .alert-panel h3 {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.8rem;
-  }
-  .cta-links a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    border-radius: 999px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-    text-decoration: none;
-  }
-  .cta-links a.primary {
-    background: #3b82f6;
-    color: #fff;
-  }
-  .cta-links a.secondary {
-    background: rgba(59,130,246,0.12);
-    color: #1d4ed8;
-  }
-</style>
 
-<div class="container my-4" data-page="home-development">
-  <section class="homepage-hero" data-section="hero">
-    <span class="hero-badge" data-label="project-tag">🧭 Team Sandbox</span>
-    <h1>{{ CUSTOM_TITLE|default:"LLM Trace Intelligence" }}</h1>
-    <p data-field="mission">
-      Build the toolchain that lets teams store, query, and analyze large language model usage. We surface
-      hierarchical topic models across chatbot traces so you can spot emerging behaviors, strengthen guardrails,
-      and celebrate delightful interactions.
-    </p>
-    <div class="mt-3 cta-links" data-section="links">
-      <a class="primary" href="{% url 'dataset_imports:catalog' %}">📚 Explore datasets</a>
-      <a class="secondary" href="{% url 'dataset_imports:explore' %}">🧪 Run analysis</a>
+<section
+  class="usa-hero usa-hero--slim"
+  aria-label="LLM Trace Intelligence overview"
+  data-section="hero"
+  style="background-image: url('{% static 'img/sprint-01.png' %}');"
+>
+  <div class="grid-container">
+    <div class="usa-hero__callout">
+      <span
+        class="usa-tag usa-tag--big bg-white text-ink usa-opacity-70"
+        data-label="project-tag"
+      >
+        Sprint 1
+      </span>
+      {% with hero_title=CUSTOM_TITLE|default:"LLM Trace Intelligence" %}
+        {% if hero_title|lower == "caisi ai to" %}
+          <h1 class="usa-hero__heading">LLM Trace Intelligence</h1>
+        {% else %}
+          <h1 class="usa-hero__heading">{{ hero_title }}</h1>
+        {% endif %}
+      {% endwith %}
+      <p class="usa-hero__description" data-field="mission">
+        Build the toolchain that lets teams store, query, and analyze large language model usage. We surface
+        hierarchical topic models across chatbot traces so you can spot emerging behaviors, strengthen guardrails,
+        and celebrate delightful interactions.
+      </p>
+      <div class="usa-hero__cta" data-section="links">
+        <div class="usa-button-group">
+          <a class="usa-button" href="{% url 'dataset_imports:catalog' %}">Explore datasets</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div data-page="home-development">
+  <section class="usa-section usa-section--light" data-section="tools">
+    <div class="grid-container">
+      <div class="grid-row grid-gap-lg">
+        <div class="grid-col-12 desktop:grid-col-6">
+          <article class="usa-card" data-tool="trace-intel">
+            <div class="usa-card__container">
+              <header class="usa-card__header">
+                <span class="usa-tag">Tool A · Functionality Evaluation Tool</span>
+                <h2 class="usa-card__heading margin-top-2">Extract topics from chatbot traces</h2>
+              </header>
+              <div class="usa-card__body">
+                <p>
+                  The goal of the hierarchical topic modeling is to help NIST researchers identify and analyze different types
+                  of chatbot-interaction traces.
+                </p>
+                <ul class="usa-icon-list">
+                  <li class="usa-icon-list__item">
+                    <div class="usa-icon-list__icon" aria-hidden="true">⬇️</div>
+                    <div class="usa-icon-list__content">
+                      <h3 class="usa-icon-list__title">Ingest &amp; Normalize</h3>
+                      <p>Fetch artifacts from Hugging Face or internal buckets, stamp checksums, and harmonize schemas.</p>
+                    </div>
+                  </li>
+                  <li class="usa-icon-list__item">
+                    <div class="usa-icon-list__icon" aria-hidden="true">🧬</div>
+                    <div class="usa-icon-list__content">
+                      <h3 class="usa-icon-list__title">Hierarchical Topic Modeling</h3>
+                      <p>Cluster prompts and responses into evolving themes to uncover patterns and intent drift.</p>
+                    </div>
+                  </li>
+                  <li class="usa-icon-list__item">
+                    <div class="usa-icon-list__icon" aria-hidden="true">📊</div>
+                    <div class="usa-icon-list__content">
+                      <h3 class="usa-icon-list__title">Explorable Visualizations</h3>
+                      <p>Send results to dashboards or graph tools so product, safety, and policy teams can investigate.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="grid-col-12 desktop:grid-col-6">
+          <article class="usa-card" data-tool="impact-classifier">
+            <div class="usa-card__container">
+              <header class="usa-card__header">
+                <span class="usa-tag">Tool B · High-Impact Classifier</span>
+                <h2 class="usa-card__heading margin-top-2">Flag high-impact traces</h2>
+              </header>
+              <div class="usa-card__body">
+                <p>
+                  The fundamental goal of logging is help NIST researchers to investigate the decision-making behind flagging
+                  <a href="https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf"
+                    target="_blank" rel="noopener">
+                    High-Impact
+                  </a>
+                  interactions.
+                </p>
+                <ul class="usa-icon-list">
+                  <li class="usa-icon-list__item">
+                    <div class="usa-icon-list__icon" aria-hidden="true">🛡️</div>
+                    <div class="usa-icon-list__content">
+                      <h3 class="usa-icon-list__title">Policy Aware</h3>
+                      <p>Cross-check every trace against compliance patterns and agency guardrails.</p>
+                    </div>
+                  </li>
+                  <li class="usa-icon-list__item">
+                    <div class="usa-icon-list__icon" aria-hidden="true">🎯</div>
+                    <div class="usa-icon-list__content">
+                      <h3 class="usa-icon-list__title">Actionable Alerts</h3>
+                      <p>Escalate high-impact interactions with replay links and full provenance.</p>
+                    </div>
+                  </li>
+                  <li class="usa-icon-list__item">
+                    <div class="usa-icon-list__icon" aria-hidden="true">📁</div>
+                    <div class="usa-icon-list__content">
+                      <h3 class="usa-icon-list__title">Audit Trail</h3>
+                      <p>Document mitigations and approvals so oversight reviews stay effortless.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="tool-grid" data-section="tools">
-    <article class="tool-card" data-tool="trace-intel">
-      <span class="tool-pill">Tool A · Trace Intelligence</span>
-      <h2>Pipeline the entire conversation history</h2>
-      <p>Import remote traces, normalize them, and keep provenance so everyone can replay how humans interact with your AI systems.</p>
-      <div class="tool-steps">
-        <div class="tool-step">
-          <div class="tool-icon">⬇️</div>
-          <div>
-            <h4>Ingest & Normalize</h4>
-            <p>Fetch artifacts from Hugging Face or internal buckets, stamp checksums, and harmonize schemas.</p>
+  <section class="usa-section" data-section="pillars">
+    <div class="grid-container">
+      <div class="usa-card-group">
+        <article class="usa-card" data-card="storage">
+          <div class="usa-card__container">
+            <header class="usa-card__header">
+              <h3 class="usa-card__heading">Trace Storage &amp; Provenance</h3>
+            </header>
+            <div class="usa-card__body">
+              <p>
+                Ingest raw user ⇄ model conversations, record checksums and timestamps, and push them through the
+                insight pipeline with provenance intact.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-step">
-          <div class="tool-icon">🧬</div>
-          <div>
-            <h4>Hierarchical Topic Modeling</h4>
-            <p>Cluster prompts and responses into evolving themes to uncover patterns and intent drift.</p>
+        </article>
+        <article class="usa-card" data-card="analysis">
+          <div class="usa-card__container">
+            <header class="usa-card__header">
+              <h3 class="usa-card__heading">Hierarchical Topic Modeling</h3>
+            </header>
+            <div class="usa-card__body">
+              <p>
+                Automatically cluster prompts and responses into multi-level themes. Compare cohorts, track intent
+                drift, and hand insights to product, safety, or policy teams.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-step">
-          <div class="tool-icon">📊</div>
-          <div>
-            <h4>Explorable Visualizations</h4>
-            <p>Send results to dashboards or graph tools so product, safety, and policy teams can investigate.</p>
+        </article>
+        <article class="usa-card" data-card="visualization">
+          <div class="usa-card__container">
+            <header class="usa-card__header">
+              <h3 class="usa-card__heading">Explore, Compare &amp; Visualize</h3>
+            </header>
+            <div class="usa-card__body">
+              <p>
+                Give teams interactive dashboards to explore traces, compare cohorts, and visualize trends—from
+                quick timelines to deep-dive graph views.
+              </p>
+            </div>
           </div>
-        </div>
+        </article>
       </div>
-    </article>
-    <article class="tool-card" data-tool="impact-classifier">
-      <span class="tool-pill">Tool B · High-Impact Classifier</span>
-      <h2>Flag critical traces before they escalate</h2>
-      <p>Continuously checks traces against <a href="https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf" target="_blank" rel="noopener">OMB M-25-21</a> Sections 4(a), 5, and 6 so compliance teams get early warning with full provenance.</p>
-      <div class="tool-steps">
-        <div class="tool-step">
-          <div class="tool-icon">🛡️</div>
-          <div>
-            <h4>Policy Aware</h4>
-            <p>Cross-check every trace against compliance patterns and agency guardrails.</p>
-          </div>
-        </div>
-        <div class="tool-step">
-          <div class="tool-icon">🎯</div>
-          <div>
-            <h4>Actionable Alerts</h4>
-            <p>Escalate high-impact interactions with replay links and full provenance.</p>
-          </div>
-        </div>
-        <div class="tool-step">
-          <div class="tool-icon">📁</div>
-          <div>
-            <h4>Audit Trail</h4>
-            <p>Document mitigations and approvals so oversight reviews stay effortless.</p>
-          </div>
-        </div>
-      </div>
-    </article>
-  </section>
-
-  <section class="feature-grid" data-section="pillars">
-    <article class="feature-card" data-card="storage">
-      <h3>Trace Storage & Provenance</h3>
-      <p>Ingest raw user ⇄ model conversations, record checksums and timestamps, and push them through the insight
-         pipeline with provenance intact.</p>
-    </article>
-    <article class="feature-card" data-card="analysis">
-      <h3>Hierarchical Topic Modeling</h3>
-      <p>Automatically cluster prompts and responses into multi-level themes. Compare cohorts, track intent drift,
-         and hand insights to product, safety, or policy teams.</p>
-    </article>
-    <article class="feature-card" data-card="visualization">
-      <h3>Explore, Compare & Visualize</h3>
-      <p>Give teams interactive dashboards to explore traces, compare cohorts, and visualize trends—from quick
-         timelines to deep-dive graph views.</p>
-    </article>
+    </div>
   </section>
 
 </div>

@@ -1,0 +1,11 @@
+"""Shared constants for dataset import workflows."""
+
+DEFAULT_CLUSTER_COUNT = 8
+MAX_CLUSTER_DOCUMENTS = 1500
+CLUSTER_PREVIEW_PER_GROUP = 3
+
+__all__ = [
+    "DEFAULT_CLUSTER_COUNT",
+    "MAX_CLUSTER_DOCUMENTS",
+    "CLUSTER_PREVIEW_PER_GROUP",
+]

@@ -1,0 +1,243 @@
+:root {
+  --admin-accent: #2151a1;
+  --admin-accent-soft: rgba(33, 81, 161, 0.08);
+  --admin-card-bg: #ffffff;
+  --admin-card-border: #dfe1e6;
+  --admin-body-bg: #f5f6fa;
+  --admin-muted: #6b7280;
+}
+
+body.django-admin-site {
+  background: var(--admin-body-bg);
+}
+
+.admin-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-branding__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--admin-accent);
+  text-decoration: none;
+}
+
+.admin-branding__title:hover {
+  text-decoration: underline;
+}
+
+.admin-branding__subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--admin-muted);
+}
+
+.admin-global-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-global-link {
+  font-size: 0.9rem;
+  color: var(--admin-accent);
+  text-decoration: none;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, border 0.2s ease;
+}
+
+.admin-global-link:hover {
+  background: var(--admin-accent-soft);
+  border-color: rgba(33, 81, 161, 0.25);
+}
+
+.admin-dashboard {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.admin-hero {
+  background: linear-gradient(135deg, #2151a1, #4577d4);
+  color: #fff;
+  padding: 1.75rem 2rem;
+  border-radius: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 12px 24px rgba(39, 68, 125, 0.15);
+}
+
+.admin-hero__headline {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.admin-hero__subtitle {
+  margin: 0;
+  font-size: 1rem;
+  max-width: 48rem;
+  opacity: 0.9;
+}
+
+.admin-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-hero__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff;
+  color: #2151a1;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 16px rgba(17, 42, 94, 0.12);
+}
+
+.admin-hero__btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 18px rgba(17, 42, 94, 0.18);
+}
+
+.admin-dashboard__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1.25fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .admin-dashboard__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-card {
+  background: var(--admin-card-bg);
+  border-radius: 0.85rem;
+  border: 1px solid var(--admin-card-border);
+  box-shadow: 0 4px 10px rgba(31, 41, 55, 0.08);
+  padding: 1.5rem;
+}
+
+.admin-card__title {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.admin-app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.admin-app-card {
+  border: 1px solid var(--admin-card-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-app-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.admin-app-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.admin-app-card__meta {
+  font-size: 0.85rem;
+  color: var(--admin-muted);
+}
+
+.admin-model-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-model-list li a {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: #1f2937;
+  background: rgba(33, 81, 161, 0.05);
+  transition: background 0.15s ease;
+}
+
+.admin-model-list li a:hover {
+  background: rgba(33, 81, 161, 0.12);
+}
+
+.admin-model-list li span {
+  font-size: 0.82rem;
+  color: var(--admin-muted);
+}
+
+.admin-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-activity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.admin-activity-item__time {
+  font-size: 0.78rem;
+  color: var(--admin-muted);
+}
+
+.admin-empty-state {
+  margin: 0;
+  color: var(--admin-muted);
+}
+
+#content {
+  padding: 2rem;
+}
+
+#content h1 {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-hero {
+    padding: 1.25rem;
+  }
+
+  #content {
+    padding: 1.25rem;
+  }
+}
+

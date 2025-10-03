@@ -1,0 +1,83 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static log %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <section class="admin-hero">
+        <div>
+            <h1 class="admin-hero__headline">
+                {% blocktranslate with name=request.user.get_full_name|default:request.user.get_username %}
+                Welcome back, {{ name }}
+                {% endblocktranslate %}
+            </h1>
+            <p class="admin-hero__subtitle">
+                {% trans "Use this dashboard to manage imports, curate datasets, and keep the MDCS environment running smoothly." %}
+            </p>
+        </div>
+        <div class="admin-hero__actions">
+            <a class="admin-hero__btn" href="{% url 'dataset_imports:explore' %}">
+                {% trans "Open data explorer" %}
+            </a>
+            <a class="admin-hero__btn" href="{% url 'dataset_imports:catalog' %}">
+                {% trans "Dataset catalog" %}
+            </a>
+            <a class="admin-hero__btn" href="{% url 'admin:dataset_imports_datasetimport_changelist' %}">
+                {% trans "Import history" %}
+            </a>
+        </div>
+    </section>
+
+    <div class="admin-dashboard__grid">
+        <section class="admin-card">
+            <h2 class="admin-card__title">{% trans "Applications" %}</h2>
+            {% if app_list %}
+                <div class="admin-app-grid">
+                {% for app in app_list %}
+                    <article class="admin-app-card">
+                        <header>
+                            <h3 class="admin-app-card__title">{{ app.name }}</h3>
+                            <p class="admin-app-card__meta">
+                                {% blocktranslate count model_count=app.models|length %}{{ model_count }} model{% plural %}{{ model_count }} models{% endblocktranslate %}
+                            </p>
+                        </header>
+                        <ul class="admin-model-list">
+                            {% for model in app.models %}
+                                {% if model.admin_url %}
+                                    <li>
+                                        <a href="{{ model.admin_url }}">
+                                            <span>{{ model.name }}</span>
+                                            <span>{% trans "Manage" %}</span>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="text-muted">{{ model.name }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </article>
+                {% endfor %}
+                </div>
+            {% else %}
+                <p class="admin-empty-state">{% trans "You do not have permission to view or edit anything." %}</p>
+            {% endif %}
+        </section>
+
+        <aside class="admin-card">
+            <h2 class="admin-card__title">{% trans "Recent activity" %}</h2>
+            {% get_admin_log 10 as admin_log for_user user %}
+            {% if admin_log %}
+                <ul class="admin-activity-list">
+                    {% for entry in admin_log %}
+                        <li class="admin-activity-item">
+                            <span>{{ entry|capfirst }}</span>
+                            <span class="admin-activity-item__time">{{ entry.action_time|date:"M j, Y H:i" }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="admin-empty-state">{% trans "No recent actions available." %}</p>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+{% endblock %}

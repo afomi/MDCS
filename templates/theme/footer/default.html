@@ -1,18 +1,27 @@
 {% load static %}
 
-<div id="footer">
-    <div class="d-flex">
-        <div class="{% if BOOTSTRAP_VERSION|first == "4" %}mr-auto{% elif BOOTSTRAP_VERSION|first == "5"  %}me-auto{% endif %}">
-            CDCS Version {% include "theme/footer/version.html" %}
+<footer class="usa-footer">
+  <div class="grid-container usa-footer__return-to-top">
+    <a href="#">Return to top</a>
+  </div>
+  <div class="usa-footer__secondary-section">
+    <div class="grid-container">
+      <div class="display-flex flex-align-center">
+        <div class="usa-footer__logo mobile-lg:grid-col-6 gap-2 display-flex flex-align-center">
+          <img class="usa-footer__logo-img" src="{% static 'img/NIST_logo.svg' %}" alt="NIST logo">
+          <p class="usa-footer__logo-heading font-sans-sm margin-0">National Institute of Standards and Technology</p>
         </div>
-        <div id="footer-right" class="d-flex">
-            {% include 'core_website_app/user/footer_menu.html' %}
-            <span>
-                Powered by:
-                <img src="{% static 'img/cdcs_logo.png' %}" alt="cdcs-logo" class="cdcs-logo"/>
-                <a href="https://github.com/usnistgov/mdcs">CDCS</a>
-            </span>
+        <div class="usa-footer__contact-links mobile-lg:grid-col-6 gap-2">
+          <p class="usa-footer__contact-heading font-sans-xs margin-0 padding-top-2 text-right">
+            <a class="footer-cdcs-link gap-2" href="https://github.com/usnistgov/mdcs">
+              <img class="usa-footer__logo-img"
+                src="{% static 'img/cdcs_logo.png' %}"
+                alt="CDCS logo">
+              Powered by CDCS 3.18.0
+            </a>
+          </p>
         </div>
+      </div>
     </div>
-
-</div>
+  </div>
+</footer>

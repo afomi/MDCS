@@ -1,0 +1,424 @@
+{% extends "theme.html" %}
+{% load static i18n %}
+
+{% block app_data %}
+<section
+  class="usa-hero"
+  aria-label="{% translate "MDCS introduction" %}"
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <div
+      class="usa-hero__callout bg-primary-darker text-primary-inverse"
+    >
+      <p
+        class="usa-tag usa-tag--big bg-white text-primary margin-bottom-2"
+      >
+        {% translate "Materials Data Curation System" %}
+      </p>
+      <h1
+        class="usa-hero__heading margin-bottom-2"
+      >
+        {% translate "Curate, transform, and analyze materials data with confidence." %}
+      </h1>
+      <p
+        class="usa-intro margin-bottom-3"
+      >
+        {% translate "MDCS streamlines dataset ingestion and transformation with reusable templates, automated normalization, and flexible analysis workflows grounded in NIST best practices." %}
+      </p>
+      <div
+        class="usa-button-group usa-button-group--segmented margin-bottom-2"
+      >
+        <a
+          class="usa-button"
+          href="{% url 'dataset_imports:catalog' %}"
+        >
+          {% translate "Explore datasets" %}
+        </a>
+        <a
+          class="usa-button usa-button--outline"
+          href="/docs/README"
+        >
+          {% translate "Read the docs" %}
+        </a>
+      </div>
+      <p
+        class="usa-prose margin-bottom-0"
+      >
+        <span
+          class="font-heading-sm text-base text-primary-inverse"
+        >
+          {% translate "Trusted by research teams federating thousands of materials experiments." %}
+        </span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section
+  class="usa-section padding-y-4 margin-bottom-5"
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <div
+      class="usa-card-group"
+    >
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <div
+            class="usa-card__body text-center"
+          >
+            <p
+              class="font-heading-xl text-primary-darker margin-bottom-1"
+            >
+              1500+
+            </p>
+            <p
+              class="usa-prose margin-bottom-0"
+            >
+              {% translate "Curated datasets processed through MDCS pipelines." %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <div
+            class="usa-card__body text-center"
+          >
+            <p
+              class="font-heading-xl text-primary-darker margin-bottom-1"
+            >
+              48%
+            </p>
+            <p
+              class="usa-prose margin-bottom-0"
+            >
+              {% translate "Average reduction in time-to-publication for normalized datasets." %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <div
+            class="usa-card__body text-center"
+          >
+            <p
+              class="font-heading-xl text-primary-darker margin-bottom-1"
+            >
+              9/10
+            </p>
+            <p
+              class="usa-prose margin-bottom-0"
+            >
+              {% translate "Analyst satisfaction rating for tracking provenance and audit trails." %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section
+  class="usa-section margin-bottom-6"
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <h2
+      class="usa-heading margin-bottom-3"
+    >
+      {% translate "Why teams choose MDCS" %}
+    </h2>
+    <div
+      class="usa-card-group"
+    >
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <header
+            class="usa-card__header"
+          >
+            <h3
+              class="usa-card__heading"
+            >
+              {% translate "Template-driven curation" %}
+            </h3>
+          </header>
+          <div
+            class="usa-card__body"
+          >
+            <p
+              class="usa-prose"
+            >
+              {% translate "Standardize data capture with schema-backed forms and automated validation, ensuring every submission is analysis-ready." %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <header
+            class="usa-card__header"
+          >
+            <h3
+              class="usa-card__heading"
+            >
+              {% translate "Transform & normalize" %}
+            </h3>
+          </header>
+          <div
+            class="usa-card__body"
+          >
+            <p
+              class="usa-prose"
+            >
+              {% translate "Unify disparate sources into consistent XML or JSON, generate previews, and trace every transformation back to the original artifact." %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <header
+            class="usa-card__header"
+          >
+            <h3
+              class="usa-card__heading"
+            >
+              {% translate "Insights on demand" %}
+            </h3>
+          </header>
+          <div
+            class="usa-card__body"
+          >
+            <p
+              class="usa-prose"
+            >
+              {% translate "Launch top-down or bottom-up analyses, monitor progress, and share summaries with collaborators via dashboards or APIs." %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section
+  class="usa-section margin-bottom-6"
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <h2
+      class="usa-heading margin-bottom-3"
+    >
+      {% translate "Get started in three steps" %}
+    </h2>
+    <ol
+      class="usa-process-list"
+    >
+      <li
+        class="usa-process-list__item"
+      >
+        <h3
+          class="usa-process-list__heading"
+        >
+          {% translate "Pick a dataset template" %}
+        </h3>
+        <p
+          class="usa-prose"
+        >
+          {% translate "Browse curated templates or compose your own schema to match lab instrumentation and publication requirements." %}
+        </p>
+      </li>
+      <li
+        class="usa-process-list__item"
+      >
+        <h3
+          class="usa-process-list__heading"
+        >
+          {% translate "Ingest and normalize" %}
+        </h3>
+        <p
+          class="usa-prose"
+        >
+          {% translate "Use the ingestion pipeline to download artifacts, extract assets, and normalize conversations—all with provenance tracking." %}
+        </p>
+      </li>
+      <li
+        class="usa-process-list__item"
+      >
+        <h3
+          class="usa-process-list__heading"
+        >
+          {% translate "Analyze & publish" %}
+        </h3>
+        <p
+          class="usa-prose"
+        >
+          {% translate "Run automated analyses, export machine-readable records, and distribute insights through the MDCS API or dashboards." %}
+        </p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section
+  class="usa-section bg-base-lightest margin-bottom-6"
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <div
+      class="grid-row grid-gap-lg flex-align-center"
+    >
+      <div
+        class="grid-col-12 desktop:grid-col-6"
+      >
+        <h2
+          class="usa-heading margin-bottom-2"
+        >
+          {% translate "Resources & support" %}
+        </h2>
+        <p
+          class="usa-prose margin-bottom-3"
+        >
+          {% translate "Stay productive with quick-start guides, API references, and responsive support from the MDCS maintainers." %}
+        </p>
+        <div
+          class="usa-button-group usa-button-group--segmented"
+        >
+          <a
+            class="usa-button"
+            href="/help/"
+          >
+            {% translate "Visit the help center" %}
+          </a>
+          <a
+            class="usa-button usa-button--outline"
+            href="{% url 'core_website_app_contact' %}"
+          >
+            {% translate "Contact support" %}
+          </a>
+        </div>
+      </div>
+      <div
+        class="grid-col-12 desktop:grid-col-6"
+      >
+        <ul
+          class="usa-list usa-list--unstyled usa-prose margin-0"
+        >
+          <li
+            class="margin-bottom-2"
+          >
+            <span
+              class="text-bold"
+            >
+              {% translate "API reference" %}
+            </span>
+            <br />
+            <a
+              class="usa-link"
+              href="/swagger/"
+            >
+              {% translate "Explore REST endpoints for automation" %}
+            </a>
+          </li>
+          <li
+            class="margin-bottom-2"
+          >
+            <span
+              class="text-bold"
+            >
+              {% translate "Release notes" %}
+            </span>
+            <br />
+            <a
+              class="usa-link"
+              href="/docs/README#release-notes"
+            >
+              {% translate "See what's new in the latest deployment" %}
+            </a>
+          </li>
+          <li>
+            <span
+              class="text-bold"
+            >
+              {% translate "Community" %}
+            </span>
+            <br />
+            <a
+              class="usa-link"
+              href="/docs/OPEN_SOURCE"
+            >
+              {% translate "Contribute on GitHub and join design reviews" %}
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section
+  class="usa-section margin-bottom-0"
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <div
+      class="usa-alert usa-alert--info"
+      role="status"
+    >
+      <div
+        class="usa-alert__body"
+      >
+        <h3
+          class="usa-alert__heading"
+        >
+          {% translate "Ready to accelerate your materials data pipeline?" %}
+        </h3>
+        <p
+          class="usa-alert__text"
+        >
+          {% translate "Log in with your NIST credentials to access saved templates, restart ingestion jobs, and collaborate with your team." %}
+        </p>
+        <a
+          class="usa-button"
+          href="/accounts/login/"
+        >
+          {% translate "Sign in to MDCS" %}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

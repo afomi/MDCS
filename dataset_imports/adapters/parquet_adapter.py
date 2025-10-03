@@ -33,7 +33,8 @@ class ParquetConversationAdapter(DatasetAdapter):
         messages: List[NormalizedMessage] = []
         for idx, turn in enumerate(turns):
             role = normalize_role(turn.get("role") or turn.get("from") or "other")
-            content = turn.get("content") or turn.get("value") or ""
+            # Some datasets use 'text' instead of 'content'/'value'
+            content = turn.get("content") or turn.get("value") or turn.get("text") or ""
             metadata = {k: v for k, v in turn.items() if k not in {"role", "from", "content", "value"}}
             messages.append(
                 NormalizedMessage(
@@ -52,4 +53,3 @@ class ParquetConversationAdapter(DatasetAdapter):
         )
         metadata = {k: v for k, v in record.items() if k not in {"messages", "conversation", "turns"}}
         return NormalizedConversation(source_id=conversation_id, messages=messages, metadata=metadata)
-

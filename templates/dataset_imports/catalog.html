@@ -2,112 +2,395 @@
 
 {% block app_data %}
 <style>
-  .ingestion-grid {
+  .catalog-header {
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
+    margin-bottom: 2rem;
   }
-  @media (min-width: 768px) {
-    .ingestion-grid {
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+
+  @media (min-width: 64rem) {
+    .catalog-header {
+      grid-template-columns: 1fr auto;
+      align-items: center;
     }
   }
-  .ingestion-card .progress {
-    height: 8px;
+
+  .catalog-title {
+    margin: 0;
   }
+
+  .catalog-subtitle {
+    margin: 0.25rem 0 0;
+    color: #5c5c5c;
+  }
+
   .dataset-summary {
-    max-width: 100%;
+    display: grid;
+    gap: 0.5rem;
   }
-  .dataset-summary [data-field="description"],
-  .dataset-summary [data-field="notes"] {
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    display: block;
+
+  .dataset-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    color: #4d4d4d;
+    font-size: 0.9rem;
+  }
+
+  .dataset-notes {
+    font-size: 0.85rem;
+    color: #616161;
+  }
+
+  .progress-meter {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #616161;
+  }
+
+  .usa-table td,
+  .usa-table th {
+    vertical-align: middle;
+  }
+
+  .dataset-status {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status-tag--neutral {
+    background-color: #565c65;
+    color: #ffffff;
+  }
+
+  .status-tag--info {
+    background-color: #005ea2;
+    color: #ffffff;
+  }
+
+  .status-tag--warning {
+    background-color: #ffbe2e;
+    color: #1b1b1b;
+  }
+
+  .status-tag--success {
+    background-color: #0f7e49;
+    color: #ffffff;
+  }
+
+  .status-tag--error {
+    background-color: #d54309;
+    color: #ffffff;
+  }
+
+  .status-tag--muted {
+    background-color: #f0f0f0;
+    color: #4d4d4d;
+    border: 1px solid #dfe1e2;
+  }
+
+  .dataset-supported-tag {
+    background-color: #f9f9f9;
+    color: #1b1b1b;
+  }
+
+  .text-base-light {
+    color: #6b6b6b;
   }
 </style>
 
-<div class="ingestion-wrapper">
-  <h1 class="mb-3">Datasets</h1>
-  <p class="text-muted mb-4">Browse and import datasets. Datasets are managed in a .json file for now.</p>
-
-  {% if not user_is_staff %}
-  <div class="alert alert-warning" role="alert">
-    Staff access is required to launch or reset ingestion jobs. You can still inspect dataset details below.
-  </div>
-  {% endif %}
-
-  <div class="ingestion-grid">
-    {% for entry in datasets %}
-      {% with dataset=entry.dataset %}
-      <section
-        class="card ingestion-card h-100"
-        data-dataset-card
-        data-dataset-id="{{ dataset.id }}"
-        data-status-url="{{ entry.status_url }}"
-        data-detail-url="{{ entry.detail_url }}"
-        data-supported="{{ dataset.supported|yesno:'true,false' }}"
-        data-can-control="{{ user_is_staff|yesno:'true,false' }}"
+<section
+  class=""
+>
+  <div
+    class="grid-container-widescreen"
+  >
+    <div
+      class="dataset-catalog"
+    >
+      <div
+        class="catalog-header"
       >
-        <div class="card-body d-flex flex-column gap-3">
-          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
-            <div class="dataset-summary">
-              <h2 class="h4 mb-1" data-field="name">{{ dataset.name }}</h2>
-              <p class="mb-1 text-muted small" data-field="description">{{ dataset.description }}</p>
-              {% if dataset.notes %}
-              <p class="small text-muted mb-2" data-field="notes">{{ dataset.notes }}</p>
-              {% endif %}
-              <ul class="list-unstyled small text-muted mb-0">
-                <li data-field="artifact-count">Artifacts: {{ entry.total_artifacts_defined }}</li>
-                {% if dataset.source_url %}
-                <li data-field="source">Source: <a href="{{ dataset.source_url }}" target="_blank" rel="noopener">{{ dataset.source_url }}</a></li>
-                {% endif %}
-                {% if dataset.license %}
-                <li data-field="license">License: {{ dataset.license }}</li>
-                {% endif %}
-              </ul>
-            </div>
-            <span class="badge {{ entry.status_badge_class|default:'bg-secondary' }}" data-role="status-badge">
-              <span class="me-1" data-role="status-check" aria-hidden="true" {% if not entry.status_show_check %}style="display:none"{% endif %}>&#10003;</span>
-              <span data-role="status-label">{{ entry.status }}</span>
-            </span>
-          </div>
-
-          <div class="d-flex flex-column gap-2">
-            <div class="progress">
-              <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-role="progress-value" style="width:0%"></div>
-            </div>
-            <div class="d-flex justify-content-between small text-muted">
-              <span data-role="progress-text">No artifacts processed yet</span>
-              <span data-role="bytes-text">0 bytes downloaded</span>
-            </div>
-            <div class="small text-muted" data-role="timestamp"></div>
-          </div>
-
-          <div class="d-flex flex-wrap gap-2 align-items-center">
-            {% if not dataset.supported %}
-              <span class="badge bg-secondary">Pipeline pending</span>
-            {% endif %}
-            <a class="btn btn-primary btn-sm" href="{{ entry.detail_url }}">Open dataset</a>
-          </div>
-          {% if entry.artifact_limit and entry.artifact_limit < entry.total_artifacts_defined %}
-          <div class="small text-muted" data-field="download-limit">Download limit: {{ entry.artifact_limit }} of {{ entry.total_artifacts_defined }}</div>
-          {% endif %}
+        <div
+          class="usa-prose"
+        >
+          <h1
+            class="catalog-title"
+          >
+            Datasets
+          </h1>
+          <p
+            class="catalog-subtitle"
+          >
+            Browse, monitor, and curate ingest pipelines. Dataset configurations
+            <a
+              href="https://github.com/example/repo/dataset_imports/catalog.py"
+              target="_blank"
+              rel="noopener"
+            >
+              live in the catalog definition
+            </a>
+            for now.
+          </p>
         </div>
-      </section>
-      {% endwith %}
-    {% empty %}
-      <div class="card border-0 shadow-sm">
-        <div class="card-body text-center text-muted">
-          No datasets configured.
+        {% if not user_is_staff %}
+        <span
+          class="usa-tag dataset-supported-tag"
+        >
+          Staff access required for ingest controls
+        </span>
+        {% endif %}
+      </div>
+
+      <div
+        class="usa-card"
+      >
+        <div
+          class="usa-card__container"
+        >
+          <div
+            class="usa-card__body padding-0"
+          >
+            <table
+              class="usa-table usa-table--borderless width-full"
+            >
+              <thead>
+                <tr>
+                  <th
+                    scope="col"
+                  >
+                    Dataset
+                  </th>
+                  <th
+                    scope="col"
+                  >
+                    Status
+                  </th>
+                  <th
+                    scope="col"
+                  >
+                    Progress
+                  </th>
+                  <th
+                    scope="col"
+                  >
+                    Artifacts
+                  </th>
+                  <th
+                    scope="col"
+                    class="text-align-right"
+                  >
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for entry in datasets %}
+                  {% with dataset=entry.dataset %}
+                  <tr
+                    data-dataset-row
+                    data-status-url="{{ entry.status_url }}"
+                  >
+                    <td>
+                      <div
+                        class="dataset-summary"
+                      >
+                        <span
+                          class="font-sans-lg text-semibold"
+                        >
+                          {{ dataset.name }}
+                        </span>
+                        {% if dataset.description %}
+                        <div
+                          class="usa-prose"
+                        >
+                          <p>
+                            {{ dataset.description }}
+                          </p>
+                        </div>
+                        {% endif %}
+                        {% if dataset.notes %}
+                        <div
+                          class="dataset-notes"
+                        >
+                          {{ dataset.notes }}
+                        </div>
+                        {% endif %}
+                        <div
+                          class="dataset-meta"
+                        >
+                          <span>
+                            <i
+                              class="fa-solid fa-layer-group"
+                              aria-hidden="true"
+                            ></i>
+                            {{ entry.total_artifacts_defined }} artifacts
+                          </span>
+                          {% if dataset.source_url %}
+                          <span>
+                            <i
+                              class="fa-solid fa-link"
+                              aria-hidden="true"
+                            ></i>
+                            <a
+                              href="{{ dataset.source_url }}"
+                              target="_blank"
+                              rel="noopener"
+                            >
+                              Source
+                            </a>
+                          </span>
+                          {% endif %}
+                          {% if dataset.license %}
+                          <span>
+                            <i
+                              class="fa-solid fa-scale-balanced"
+                              aria-hidden="true"
+                            ></i>
+                            {{ dataset.license }}
+                          </span>
+                          {% endif %}
+                          {% if not dataset.supported %}
+                          <span
+                            class="usa-tag status-tag status-tag--neutral"
+                          >
+                            Pipeline pending
+                          </span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div
+                        class="dataset-status"
+                      >
+                        <span
+                          class="usa-tag status-tag status-tag--neutral"
+                          data-role="status-badge"
+                        >
+                          <span
+                            class="margin-right-05"
+                            data-role="status-check"
+                            aria-hidden="true"
+                            {% if not entry.status_show_check %}
+                            style="display:none"
+                            {% endif %}
+                          >
+                            &#10003;
+                          </span>
+                          <span
+                            data-role="status-label"
+                          >
+                            {{ entry.status }}
+                          </span>
+                        </span>
+                        {% if entry.latest_import %}
+                        <div
+                          class="font-sans-2xs text-base-light"
+                          data-role="updated-at"
+                        >
+                          Updated {{ entry.latest_import.updated_at|date:"Y-m-d H:i" }}
+                        </div>
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>
+                      <div
+                        class="progress-meter"
+                      >
+                        <div
+                          class="usa-progress"
+                        >
+                          <div
+                            class="usa-progress__bar"
+                            role="progressbar"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
+                            style="width: 0%"
+                            data-role="progress-value"
+                          >
+                            <span
+                              class="usa-sr-only"
+                              data-role="progress-sr"
+                            >
+                              0 percent complete
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          data-role="progress-text"
+                        >
+                          No artifacts processed yet
+                        </div>
+                        <div
+                          data-role="bytes-text"
+                        >
+                          0 bytes downloaded
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div
+                        data-role="artifact-count"
+                      >
+                        {{ entry.artifact_limit }}/{{ entry.total_artifacts_defined }}
+                      </div>
+                      <div
+                        class="font-sans-2xs text-base-light"
+                      >
+                        Requested
+                      </div>
+                    </td>
+                    <td
+                      class="text-align-right"
+                    >
+                      <a
+                        class="usa-button usa-button--small"
+                        href="{{ entry.detail_url }}"
+                      >
+                        View
+                      </a>
+                    </td>
+                  </tr>
+                  {% endwith %}
+                {% empty %}
+                  <tr>
+                    <td
+                      colspan="5"
+                    >
+                      <div
+                        class="text-align-center text-base-light padding-y-4"
+                      >
+                        No datasets configured.
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    {% endfor %}
+    </div>
   </div>
-</div>
+</section>
 
 <script>
 (function() {
-  const cards = document.querySelectorAll('[data-dataset-card]');
-  if (!cards.length) {
+  const rows = document.querySelectorAll('[data-dataset-row]');
+  if (!rows.length) {
     return;
   }
 
@@ -132,7 +415,13 @@
     if (!badge || !state) {
       return;
     }
-    badge.className = `badge ${state.status_badge_class || 'bg-secondary'}`;
+    const classes = ['usa-tag', 'status-tag'];
+    if (state.status_badge_class) {
+      classes.push(state.status_badge_class);
+    } else {
+      classes.push('status-tag--neutral');
+    }
+    badge.className = classes.join(' ');
     const label = badge.querySelector('[data-role="status-label"]');
     const check = badge.querySelector('[data-role="status-check"]');
     if (label) {
@@ -143,15 +432,15 @@
     }
   }
 
-  cards.forEach((card) => {
-    const statusUrl = card.dataset.statusUrl;
-    const supported = card.dataset.supported === 'true';
-
-    const statusBadge = card.querySelector('[data-role="status-badge"]');
-    const progressBar = card.querySelector('[data-role="progress-value"]');
-    const progressText = card.querySelector('[data-role="progress-text"]');
-    const bytesText = card.querySelector('[data-role="bytes-text"]');
-    const timestampText = card.querySelector('[data-role="timestamp"]');
+  rows.forEach((row) => {
+    const statusUrl = row.dataset.statusUrl;
+    const statusBadge = row.querySelector('[data-role="status-badge"]');
+    const progressBar = row.querySelector('[data-role="progress-value"]');
+    const progressSr = row.querySelector('[data-role="progress-sr"]');
+    const progressText = row.querySelector('[data-role="progress-text"]');
+    const bytesText = row.querySelector('[data-role="bytes-text"]');
+    const artifactCountText = row.querySelector('[data-role="artifact-count"]');
+    const updatedAt = row.querySelector('[data-role="updated-at"]');
 
     let pollTimer = null;
 
@@ -161,8 +450,8 @@
       }
       if (state && ACTIVE_STATUSES.has(state.status)) {
         pollTimer = setTimeout(() => {
-          refreshState(false);
-        }, 5000);
+          refreshState();
+        }, 6000);
       }
     }
 
@@ -174,27 +463,42 @@
 
       if (progressBar) {
         const pct = Number(state.download_progress || 0);
-        progressBar.style.width = `${Math.max(0, Math.min(pct, 100))}%`;
-        progressBar.setAttribute('aria-valuenow', pct.toString());
+        const clamped = Math.max(0, Math.min(pct, 100));
+        progressBar.style.width = `${clamped}%`;
+        progressBar.setAttribute('aria-valuenow', clamped.toString());
+        if (progressSr) {
+          progressSr.textContent = `${clamped}% complete`;
+        }
       }
+
       if (progressText) {
-        const processed = state.processed_artifacts || 0;
-        const total = state.total_artifacts || 0;
+        const processed = state.processed_artifacts ?? state.downloaded_artifacts ?? 0;
+        const total = state.total_artifacts ?? 0;
         if (total) {
           progressText.textContent = `${processed}/${total} artifacts processed`;
         } else {
           progressText.textContent = 'No artifacts processed yet';
         }
       }
+
       if (bytesText) {
         bytesText.textContent = `${formatBytes(state.downloaded_bytes)} downloaded`;
       }
-      if (timestampText) {
-        timestampText.textContent = state.updated_at ? `Updated ${new Date(state.updated_at).toLocaleString()}` : '';
+
+      if (artifactCountText && typeof state.artifact_limit !== 'undefined') {
+        const total = state.total_artifacts ?? 0;
+        artifactCountText.textContent = `${state.artifact_limit || total}/${total}`;
+      }
+
+      if (updatedAt && state.updated_at) {
+        const dt = new Date(state.updated_at);
+        updatedAt.textContent = Number.isNaN(dt.getTime())
+          ? ''
+          : `Updated ${dt.toLocaleString()}`;
       }
     }
 
-    async function refreshState(showMessage = true) {
+    async function refreshState() {
       try {
         const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
         if (!response.ok) {
@@ -204,7 +508,7 @@
         updateState(state);
         schedulePoll(state);
       } catch (error) {
-        console.error(error);
+        console.error('Status refresh failed', error);
       }
     }
 
